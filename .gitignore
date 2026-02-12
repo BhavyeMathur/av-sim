@@ -4,8 +4,7 @@ build/*
 output/*
 
 cmake-*/
-data_sim/*
-data_raw/*
+data/*
 
 *.mp4
 *.so
