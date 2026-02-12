@@ -1,0 +1,11 @@
+Attribute,Selected_Values
+period,2024
+community_type,"Low-Income Only,Minority Only,Low-Income and Minority,Other,Undefined"
+time_of_day,"AM Peak (7am - 10am),Midday (10am - 3pm),PM Peak (3pm - 7pm),Off Peak (7pm - 7am)"
+mode,"Motorized,Walk,Bike"
+distance_mi,"0-0.5 mi,0.5-1 mi,1-2.5 mi,2.5-5 mi,5-7.5 mi,7.5-10 mi,10-15 mi,15-25 mi,25-50 mi,50-100 mi,100+ mi"
+wday_type,"Weekday,Saturday,Sunday"
+traveler_type,"Residents,Non-residents"
+purpose,"Home - Regular,Home - Other,Regular - Other,Other - Other"
+trip_end_type,"Internal,Internal-External,External-Internal"
+zone_system,Blockgroup
