@@ -32,13 +32,12 @@ RiderPool::RiderPool(const RidersDataFrame &riders)
             rider_data.reserve(riders.size());
 
             for (const auto &rider: riders) {
-                Coordinate coord(static_cast<coordinate_t>(rider.lat),
+                coordinate coord(static_cast<coordinate_t>(rider.lat),
                                  static_cast<coordinate_t>(rider.lon));
                 rider_data.emplace_back(static_cast<rider_id_t>(rider.id),
                                         coord,
                                         static_cast<timestamp_t>(rider.created_at), // login_at
-                                        static_cast<timestamp_t>(rider.created_at + rider.lifetime), // logout_at
-                                        static_cast<zone_id_t>(rider.zone_id)
+                                        static_cast<timestamp_t>(rider.created_at + rider.lifetime) // logout_at
                 );
             }
 

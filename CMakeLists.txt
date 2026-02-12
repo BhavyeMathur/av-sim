@@ -34,10 +34,10 @@ add_executable(sim ${SIM_SOURCES})
 
 set_target_properties(sim PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
 target_include_directories(sim PUBLIC src)
-target_include_directories(sim PUBLIC shared)
+target_include_directories(sim PUBLIC src/util)
 
-add_subdirectory(shared/pandas)
-add_subdirectory(shared/tqdm)
+add_subdirectory(src/util/pandas)
+add_subdirectory(src/util/tqdm)
 target_link_libraries(sim PRIVATE pandas tqdm)
 
 target_compile_definitions(sim PRIVATE SIM_FEATURE_EV_CHARGING=true)

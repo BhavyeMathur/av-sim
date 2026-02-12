@@ -17,7 +17,6 @@ RidersDataFrame::RidersDataFrame(const string &file) {
     lon = pd::column_as_vector<pd::float32>(riders, "lon");
     created_at = pd::column_as_vector<pd::uint32>(riders, "created_at");
     lifetime = pd::column_as_vector<pd::uint32>(riders, "lifetime");
-    zone_id = pd::column_as_vector<pd::uint32>(riders, "zone_id");
 }
 
 size_t RidersDataFrame::size() const {
@@ -39,7 +38,6 @@ RidersDataFrame::iterator::value_type RidersDataFrame::iterator::operator*() con
             .lon=df->lon[index],
             .created_at=df->created_at[index],
             .lifetime=df->lifetime[index],
-            .zone_id=df->zone_id[index],
     };
 }
 

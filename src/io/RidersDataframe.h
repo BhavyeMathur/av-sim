@@ -19,7 +19,6 @@ struct RidersDataFrame {
     std::vector<float> lon;
     std::vector<uint32_t> created_at;
     std::vector<uint32_t> lifetime;
-    std::vector<uint32_t> zone_id;
 
     RidersDataFrame(const std::string &file);
 

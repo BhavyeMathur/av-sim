@@ -20,17 +20,7 @@ PingDataFrame::PingDataFrame(const string &file) {
     drop_lat = pd::column_as_vector<pd::float32>(pings, "drop_lat");
     drop_lon = pd::column_as_vector<pd::float32>(pings, "drop_lon");
 
-    pick_time = pd::column_as_vector<pd::uint32>(pings, "pick_time");
-    drop_time = pd::column_as_vector<pd::uint32>(pings, "drop_time");
-    ready_time = pd::column_as_vector<pd::uint32>(pings, "ready_time");
-    sla_time = pd::column_as_vector<pd::uint32>(pings, "sla_time");
-
-    predicted_ready_time = pd::column_as_vector<pd::uint32>(pings, "predicted_ready_time");
     predicted_lm_dist = pd::column_as_vector<pd::float32>(pings, "lm_dist");
-
-    pick_zone = pd::column_as_vector<pd::uint16>(pings, "pick_zone");
-    drop_zone = pd::column_as_vector<pd::uint16>(pings, "drop_zone");
-    customer = pd::column_as_vector<pd::uint16>(pings, "customer_id");
 }
 
 size_t PingDataFrame::size() const {
@@ -55,18 +45,7 @@ PingDataFrame::iterator::value_type PingDataFrame::iterator::operator*() const {
 
             .pick_coord = {df->pick_lat[index], df->pick_lon[index]},
             .drop_coord = {df->drop_lat[index], df->drop_lon[index]},
-
-            .pick_time = df->pick_time[index],
-            .drop_time = df->drop_time[index],
-            .ready_time = df->ready_time[index],
-            .sla_time = df->sla_time[index],
-
-            .predicted_ready_time = df->predicted_ready_time[index],
             .predicted_lm_dist = df->predicted_lm_dist[index],
-
-            .pick_zone = df->pick_zone[index],
-            .drop_zone = df->drop_zone[index],
-            .customer_id = df->customer[index],
     };
 }
 

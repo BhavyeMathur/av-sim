@@ -1,7 +1,6 @@
 #pragma once
 
 #include "includes.h"
-#include "AllocationEngineConfig.h"
 
 struct Order;
 
@@ -13,34 +12,17 @@ struct AllocationResult {
 
 class AllocationEngine {
 public:
-    virtual AllocationResult match(const Order &order, const RiderPool &riders) = 0;
+    AllocationEngine();
 
-    virtual void update() {
+    AllocationResult match(const Order &order, const RiderPool &riders);
+
+    void update() {
     };
-};
-
-class SimpleJIT final : public AllocationEngine {
-public:
-    SimpleJIT();
-
-    AllocationResult match(const Order &order, const RiderPool &riders) override;
 
 private:
-    float fm_cutoff_km;
-    float speed_kmps = 40.0 / 3600;
-};
+    distance_t fm_cutoff_km;
+    speed_t speed_kmps = 40.0 / 3600;
 
-class ClusterJIT final : public AllocationEngine {
-public:
-    explicit ClusterJIT();
-
-    AllocationResult match(const Order &order, const RiderPool &riders) override;
-
-    void update() override;
-
-private:
-    AllocationEngineConfig<FirstMileConfig> fm_config;
-    AllocationEngineConfig<LastMileConfig> lm_config;
-    AllocationEngineConfig<SLAConfig> sla_config;
-    AllocationEngineConfig<RPHConfig> rph_config;
+    duration_t pick_time_s = 120;
+    duration_t drop_time_s = 120;
 };

@@ -2,6 +2,7 @@
 
 #include "includes.h"
 #include <ringbuffer.h>
+#include <coordinate.h>
 
 struct Order;
 
@@ -24,14 +25,12 @@ struct Rider {
     timestamp_t logout_at;
 
     timestamp_t eta_at = 0;
-    Coordinate eta_pos;
-    Coordinate velocity{};
+    coordinate eta_pos;
+    coordinate velocity{};
 
     #if SIM_FEATURE_EV_CHARGING
     distance_t range_km = 0;
     #endif
-
-    zone_id_t zone_id;
 
     uint8_t n_active_orders = 0;
     bool changed = false;
@@ -40,15 +39,15 @@ struct Rider {
         DEAD, IDLE, FM, WAIT, LM, DROP, WANDER, UNAVAILABLE
     } state = DEAD;
 
-    Rider(rider_id_t id, Coordinate pos, timestamp_t login_at, timestamp_t logout_at, zone_id_t zone_id)
-            : id(id), logout_at(logout_at), eta_at(login_at), eta_pos(pos), zone_id(zone_id) {
+    Rider(rider_id_t id, coordinate pos, timestamp_t login_at, timestamp_t logout_at)
+            : id(id), logout_at(logout_at), eta_at(login_at), eta_pos(pos) {
     }
 
     void add_waypoint(RiderWaypoint waypoint);
 
     void add_assignment(const Order &order, timestamp_t finish_at);
 
-    void weak_assign(Coordinate to, timestamp_t duration);
+    void weak_assign(coordinate to, timestamp_t duration);
 
     bool update();
 

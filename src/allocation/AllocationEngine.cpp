@@ -7,15 +7,15 @@
 #include "io/SimulationConfigs.h"
 
 namespace sim {
-    extern thread_local SimulationConfigs configs;
     extern thread_local timestamp_t clock;
+    extern thread_local SimulationConfigs configs;
 }
 
-SimpleJIT::SimpleJIT()
+AllocationEngine::AllocationEngine()
         : fm_cutoff_km(sim::configs.get<distance_t>("fm_cutoff_km")) {
 }
 
-AllocationResult SimpleJIT::match(const Order &order, const RiderPool &riders) {
+AllocationResult AllocationEngine::match(const Order &order, const RiderPool &riders) {
     AllocationResult result;
     auto best_pickup_at = std::numeric_limits<timestamp_t>::max();
 
@@ -33,7 +33,7 @@ AllocationResult SimpleJIT::match(const Order &order, const RiderPool &riders) {
         auto fm_time_s = static_cast<duration_t>(fm_dist_km / speed_kmps);
         auto arrive_pickup_at = fm_start_at + fm_time_s;
 
-        auto pickup_at = std::max(arrive_pickup_at, order.created_at + order.predicted_ready_time) + order.pick_time;
+        auto pickup_at = arrive_pickup_at + pick_time_s;
         if (pickup_at > best_pickup_at)
             continue;
 

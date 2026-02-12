@@ -12,7 +12,6 @@ namespace sim {
 
     thread_local SimulationConfigs configs;
     thread_local Statistics stats;
-    thread_local ZoneClusters zones(false);
 
     #if SIM_FEATURE_EV_CHARGING
     thread_local EVCharging ev_charging(false);
@@ -32,8 +31,7 @@ int main(int argc, char *argv[]) {
 
     for (auto i = 0; i < n_clusters; i++)
         threads.emplace_back([i, &argv]() {
-            sim::configs = SimulationConfigs("data_sim/sim_configs/" + std::string(argv[i + 1]) + ".txt");
-            sim::zones = ZoneClusters();
+            sim::configs = SimulationConfigs("data/sim_configs/" + std::string(argv[i + 1]) + ".txt");
 
             #if SIM_FEATURE_EV_CHARGING
             sim::ev_charging = EVCharging();

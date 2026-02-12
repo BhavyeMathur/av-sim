@@ -17,6 +17,7 @@ EVCharging::EVCharging()
 EVCharging::EVCharging(bool) {}
 
 void EVCharging::update(Rider &rider, distance_t distance) const {
+    #if SIM_FEATURE_EV_CHARGING
     rider.range_km -= distance;
 
     if (rider.range_km < 0)
@@ -29,6 +30,7 @@ void EVCharging::update(Rider &rider, distance_t distance) const {
         rider.range_km = m_charge_to_km;
         rider.add_waypoint({0, time_to_charge, RiderWaypoint::SERVICE});
     }
+    #endif
 }
 
 distance_t EVCharging::start_with_charge() const noexcept {

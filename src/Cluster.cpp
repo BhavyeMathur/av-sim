@@ -16,10 +16,10 @@ namespace sim {
 }
 
 Cluster::Cluster()
-        : m_riders("data_sim/riders/" + sim::configs.get<std::string>("riders") + ".parquet"),
+        : m_riders("data/riders/" + sim::configs.get<std::string>("riders") + ".parquet"),
           m_rider_events(RiderEvents::from_riders(m_riders)),
           m_orders([&] {
-              PingDataFrame orders("data_sim/pings/" + sim::configs.get<std::string>("pings") + ".parquet");
+              PingDataFrame orders("data/pings/" + sim::configs.get<std::string>("pings") + ".parquet");
 
               vector<Order> result;
               result.reserve(orders.size());
@@ -27,10 +27,7 @@ Cluster::Cluster()
                   result.push_back(order);
 
               return result;
-          }()),
-
-          m_routing_engine("data_sim/speed/" + sim::configs.get<std::string>("speed") + ".txt")
-//          m_hotspots(3600, 900, 0.25)
+          }())
 {
 
     sim::stats.resize(m_orders.size());
@@ -43,7 +40,6 @@ void Cluster::simulate() {
     while (sim::clock < until) {
         _update_riders();
         m_alloc_engine.update();
-        m_routing_engine.update();
 
         while (auto order = m_orders.check()) {
             auto allocation = m_alloc_engine.match(*order, m_riders);
@@ -53,12 +49,6 @@ void Cluster::simulate() {
             else
                 _on_reject_order(*order);
         }
-
-//        m_hotspots.update();
-//        for (auto &rider: m_riders.idle_riders()) {
-//            auto zone = m_hotspots.find_closest_to(rider.eta_pos);
-//            m_routing_engine.weak_assign(rider, zone.centroid);
-//        }
 
         sim::clock++;
         bar.step();
@@ -76,9 +66,8 @@ void Cluster::_update_riders() {
     m_riders.update();
 }
 
-void Cluster::_on_reject_order(const Order &order) {
-    // TODO add order to unmatched queue
-//    m_hotspots.up(order.pick_zone);
+void Cluster::_on_reject_order(const Order &) {
+
 }
 
 void Cluster::_on_accept_order(const Order &order, const AllocationResult &allocation) {

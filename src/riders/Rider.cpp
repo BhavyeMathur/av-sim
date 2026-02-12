@@ -47,7 +47,7 @@ void Rider::add_assignment(const Order &order, timestamp_t finish_at) {
     n_active_orders++;
 }
 
-void Rider::weak_assign(Coordinate to, timestamp_t duration) {
+void Rider::weak_assign(coordinate to, timestamp_t duration) {
     assert(state == State::IDLE);
 
     velocity = (to - eta_pos) / static_cast<coordinate_t>(duration);
