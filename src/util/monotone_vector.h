@@ -9,11 +9,11 @@ namespace sim {
 }
 
 template<typename T, auto FieldPtr>
-    class event_vector {
+    class monotone_vector {
         static_assert(std::is_member_object_pointer_v<decltype(FieldPtr)>,
                       "FieldPtr must be a pointer to a data member of T");
     public:
-        event_vector(std::vector<T> &&events)
+        monotone_vector(std::vector<T> &&events)
                 : m_events(std::move(events)) {
 
             std::sort(m_events.begin(), m_events.end(),

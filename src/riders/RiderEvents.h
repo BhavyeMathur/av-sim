@@ -1,7 +1,7 @@
 #pragma once
 
 #include "includes.h"
-#include "util/event_vector.h"
+#include "util/monotone_vector.h"
 
 class RiderPool;
 
@@ -17,6 +17,6 @@ struct RiderEvents {
 
     static RiderEvents from_riders(RiderPool &riders);
 
-    event_vector<RiderEvent, &RiderEvent::at> logins;
-    event_vector<RiderEvent, &RiderEvent::at> logouts;
+    monotone_vector<RiderEvent, &RiderEvent::at> logins;
+    monotone_vector<RiderEvent, &RiderEvent::at> logouts;
 };

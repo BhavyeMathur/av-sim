@@ -3,7 +3,7 @@
 #include "includes.h"
 
 #include "Order.h"
-#include "util/event_vector.h"
+#include "util/monotone_vector.h"
 #include "riders/RiderEvents.h"
 #include "riders/RiderPool.h"
 #include "riders/Rider.h"
@@ -20,7 +20,7 @@ public:
 private:
     RiderPool m_riders;
     RiderEvents m_rider_events;
-    event_vector<Order, &Order::created_at> m_orders;
+    monotone_vector<Order, &Order::created_at> m_orders;
 
     AllocationEngine m_alloc_engine;
     RoutingEngine m_routing_engine;
