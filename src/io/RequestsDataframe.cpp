@@ -1,4 +1,4 @@
-#include "PingDataframe.h"
+#include "RequestsDataframe.h"
 
 #include <pandas.h>
 #include <numeric>
@@ -6,7 +6,7 @@
 
 using namespace std;
 
-PingDataFrame::PingDataFrame(const string &file) {
+RequestsDataFrame::RequestsDataFrame(const string &file) {
     cout << "reading " << file << endl;
     auto pings = pd::read_parquet(file);
 
@@ -23,16 +23,16 @@ PingDataFrame::PingDataFrame(const string &file) {
     predicted_lm_dist = pd::column_as_vector<pd::float32>(pings, "lm_dist");
 }
 
-size_t PingDataFrame::size() const {
+size_t RequestsDataFrame::size() const {
     return pick_lat.size();
 }
 
-PingDataFrame::iterator::iterator(const PingDataFrame *df_, size_t i)
+RequestsDataFrame::iterator::iterator(const RequestsDataFrame *df_, size_t i)
         : df(df_),
           index(i) {
 }
 
-PingDataFrame::iterator::value_type PingDataFrame::iterator::operator*() const {
+RequestsDataFrame::iterator::value_type RequestsDataFrame::iterator::operator*() const {
     assert(-M_PI / 2 <= df->pick_lat[index] && df->pick_lat[index] < M_PI / 2);
     assert(-M_PI <= df->pick_lon[index] && df->pick_lon[index] < M_PI);
 
@@ -49,29 +49,29 @@ PingDataFrame::iterator::value_type PingDataFrame::iterator::operator*() const {
     };
 }
 
-PingDataFrame::iterator &PingDataFrame::iterator::operator++() {
+RequestsDataFrame::iterator &RequestsDataFrame::iterator::operator++() {
     ++index;
     return *this;
 }
 
-PingDataFrame::iterator PingDataFrame::iterator::operator++(int) {
+RequestsDataFrame::iterator RequestsDataFrame::iterator::operator++(int) {
     auto tmp = *this;
     ++index;
     return tmp;
 }
 
-bool PingDataFrame::iterator::operator==(const PingDataFrame::iterator &other) const {
+bool RequestsDataFrame::iterator::operator==(const RequestsDataFrame::iterator &other) const {
     return index == other.index && df == other.df;
 }
 
-bool PingDataFrame::iterator::operator!=(const PingDataFrame::iterator &other) const {
+bool RequestsDataFrame::iterator::operator!=(const RequestsDataFrame::iterator &other) const {
     return !(*this == other);
 }
 
-PingDataFrame::iterator PingDataFrame::begin() const {
+RequestsDataFrame::iterator RequestsDataFrame::begin() const {
     return {this, 0};
 }
 
-PingDataFrame::iterator PingDataFrame::end() const {
+RequestsDataFrame::iterator RequestsDataFrame::end() const {
     return {this, size()};
 }

@@ -50,7 +50,8 @@ template<class T>
 
         T pop() {
             while (!q_.empty()) {
-                key k = q_.pop();
+                key k = q_.top();
+                q_.pop();
 
                 if (!k or k.id >= records_.size())
                     continue;
@@ -63,6 +64,7 @@ template<class T>
                 freelist_.push_back(k.id);
                 return std::move(r.value);
             }
+
             throw std::out_of_range("called pop() on empty object");
         }
 

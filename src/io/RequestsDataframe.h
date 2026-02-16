@@ -3,10 +3,10 @@
 #include "includes.h"
 #include <coordinate.h>
 
-#include "Order.h"
+#include "Request.h"
 
 
-struct PingDataFrame {
+struct RequestsDataFrame {
     std::vector<order_id_t> id;
     std::vector<timestamp_t> created_at;
 
@@ -17,19 +17,19 @@ struct PingDataFrame {
 
     std::vector<distance_t> predicted_lm_dist;
 
-    explicit PingDataFrame(const std::string &file);
+    explicit RequestsDataFrame(const std::string &file);
 
     [[nodiscard]] size_t size() const;
 
     struct iterator {
-        const PingDataFrame *df;
+        const RequestsDataFrame *df;
         size_t index;
 
-        using value_type = Order;
+        using value_type = Request;
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::forward_iterator_tag;
 
-        iterator(const PingDataFrame *df_, size_t i);
+        iterator(const RequestsDataFrame *df_, size_t i);
 
         value_type operator*() const;
 

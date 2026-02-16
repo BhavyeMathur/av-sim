@@ -1,46 +1,72 @@
-#include "Cluster.h"
-#include "io/Statistics.h"
 #include "io/SimulationConfigs.h"
-#include "routing/EVCharging.h"
+#include "io/RequestsDataframe.h"
+#include "io/RidersDataframe.h"
+
+#include "riders/Rider.h"
+#include "events/EventBus.h"
 
 #include <iomanip>
 #include <thread>
 
 
 namespace sim {
-    thread_local timestamp_t clock = 0;
-
     thread_local SimulationConfigs configs;
-    thread_local Statistics stats;
 
-    #if SIM_FEATURE_EV_CHARGING
-    thread_local EVCharging ev_charging(false);
-    #endif
+    thread_local mutable_pq<Event> events;
+    thread_local std::vector<Request> requests;
+    thread_local std::vector<Rider> riders;
+}
+
+void on_rider_login(const Event &event) {
+
+}
+
+void on_rider_logout(const Event &event) {
+
+}
+
+void on_request_received(const Event &event) {
+
+}
+
+void create_world(const std::string &config_file) {
+    EventBus dispatcher;
+    dispatcher.on(EventType::RiderLogin, on_rider_login);
+    dispatcher.on(EventType::RiderLogout, on_rider_logout);
+
+    sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
+
+    RidersDataFrame riders_df("data/riders/" + sim::configs.get<std::string>("riders") + ".parquet");
+    RequestsDataFrame requests_df("data/pings/" + sim::configs.get<std::string>("pings") + ".parquet");
+
+    sim::riders.reserve(sim::riders.size());
+
+    for (const auto &req: requests_df) {
+        sim::requests.emplace_back(req);
+        sim::events.push({req.created_at, EventType::RequestCreated, OrderCreated{req.id}});
+    }
+
+    for (const auto &rider: riders_df) {
+        sim::riders.emplace_back(static_cast<rider_id_t>(rider.id),
+                                 coordinate{static_cast<coordinate_t>(rider.lat),
+                                            static_cast<coordinate_t>(rider.lon)});
+
+        sim::events.push({rider.created_at, EventType::RiderLogin, RiderLogin{rider.id}});
+        sim::events.push({rider.created_at + rider.lifetime, EventType::RiderLogout, RiderLogout{rider.id}});
+    }
+
+    while (!sim::events.empty()) {
+        Event event = sim::events.pop();
+        dispatcher.dispatch(event);
+    }
 }
 
 int main(int argc, char *argv[]) {
     std::cout << std::setprecision(4) << std::fixed;
 
-    auto n_clusters = argc - 1;
-
     std::vector<std::thread> threads;
-    threads.reserve(n_clusters);
-
-    std::vector<Cluster> clusters;
-    clusters.reserve(n_clusters);
-
-    for (auto i = 0; i < n_clusters; i++)
-        threads.emplace_back([i, &argv]() {
-            sim::configs = SimulationConfigs("data/sim_configs/" + std::string(argv[i + 1]) + ".txt");
-
-            #if SIM_FEATURE_EV_CHARGING
-            sim::ev_charging = EVCharging();
-            #endif
-
-            Cluster c;
-            c.simulate();
-            sim::stats.save("output/" + sim::configs.get<std::string>("output") + ".parquet");
-        });
+    for (auto i = 1; i < argc; i++)
+        threads.emplace_back([i, &argv]() { create_world(argv[i]); });
 
     auto s = std::chrono::high_resolution_clock::now();
     for (auto &t: threads)

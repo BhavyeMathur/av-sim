@@ -4,7 +4,7 @@
 #include <coordinate.h>
 
 
-struct Order {
+struct Request {
     order_id_t id;
     timestamp_t created_at;
 

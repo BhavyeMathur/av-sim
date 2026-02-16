@@ -6,32 +6,38 @@
 using event_id_t = uint64_t;
 
 enum class EventType : uint16_t {
-    OrderCreated,
+    RequestCreated,
     RiderLogin,
-    RiderLogout
+    RiderLogout,
+
+    COUNT
 };
 
 // event payloads
-struct EventOrderCreated {
+struct OrderCreated {
     size_t order_id;
 };
 
-struct EventRiderLogin {
+struct RiderLogin {
     size_t rider_id;
 };
 
-struct EventRiderLogout {
+struct RiderLogout {
     size_t rider_id;
 };
 
 using EventPayload = std::variant<
-        EventOrderCreated,
-        EventRiderLogin,
-        EventRiderLogout
+        OrderCreated,
+        RiderLogin,
+        RiderLogout
 >;
 
 struct Event {
     timestamp_t t;
     EventType type;
     EventPayload payload;
+
+    bool operator<(const Event &other) const {
+        return t < other.t;
+    }
 };
