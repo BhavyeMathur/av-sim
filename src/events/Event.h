@@ -35,7 +35,7 @@ struct LastMileStart {
     distance_t distance;
 };
 
-struct ArrivedAtDropoff : public RequestPayload {};
+struct ArrivedAtDrop : public RequestPayload {};
 
 using EventPayload = std::variant<
         RiderLogin,
@@ -49,7 +49,7 @@ using EventPayload = std::variant<
         FirstMileStart,
         ArrivedAtPickup,
         LastMileStart,
-        ArrivedAtDropoff
+        ArrivedAtDrop
 >;
 
 struct Event {

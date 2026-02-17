@@ -19,23 +19,58 @@ namespace sim {
     thread_local std::vector<Rider> riders;
 }
 
-void create_world(const std::string &config_file) {
-    sim::events.on<RiderLogin>(Rider::on_login);
-    sim::events.on<RiderLogout>(Rider::on_logout);
-    sim::events.on<RiderWaypoint>(Rider::on_waypoint);
-    sim::events.on<RequestCreated>(AllocationEngine::on_request);
+void register_default_events() {
+    sim::events.on(AllocationEngine::on_request);
 
-    sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
+    sim::events.on([](const RiderLogin &event) {
+        sim::riders[event.rider_id].login();
+    });
 
-    RidersDataFrame riders_df("data/riders/" + sim::configs.get<std::string>("riders") + ".parquet");
+    sim::events.on([](const RiderLogout &event) {
+        sim::riders[event.rider_id].logout();
+    });
+
+    sim::events.on([](const RiderWaypoint &event) {
+        sim::riders[event.rider_id].complete_waypoint();
+    });
+
+    sim::events.on([](const RequestAssigned &event) {
+        sim::requests[event.request_id].assign_to(event.rider_id);
+    });
+
+    sim::events.on([](const FirstMileStart &event) {
+        sim::requests[event.request_id].start_first_mile(event.distance);
+    });
+
+    sim::events.on([](const ArrivedAtPickup &event) {
+        sim::requests[event.request_id].await_pickup();
+    });
+
+    sim::events.on([](const LastMileStart &event) {
+        sim::requests[event.request_id].start_last_mile(event.distance);
+    });
+
+    sim::events.on([](const ArrivedAtDrop &event) {
+        sim::requests[event.request_id].await_drop();
+    });
+
+    sim::events.on([](const RequestCompleted &event) {
+        sim::requests[event.request_id].mark_completed();
+    });
+}
+
+void create_requests() {
     RequestsDataFrame requests_df("data/pings/" + sim::configs.get<std::string>("pings") + ".parquet");
-
-    sim::riders.reserve(sim::riders.size());
 
     for (const auto &req: requests_df) {
         sim::requests.emplace_back(req);
         sim::events.push({req.created_at, RequestCreated{req.id}});
     }
+}
+
+void create_riders() {
+    RidersDataFrame riders_df("data/riders/" + sim::configs.get<std::string>("riders") + ".parquet");
+    sim::riders.reserve(sim::riders.size());
 
     for (const auto &r: riders_df) {
         Rider rider(coordinate{static_cast<coordinate_t>(r.lat),
@@ -45,6 +80,15 @@ void create_world(const std::string &config_file) {
         sim::events.push({r.created_at, RiderLogin{rider.id()}});
         sim::events.push({r.created_at + r.lifetime, RiderLogout{rider.id()}});
     }
+}
+
+void create_world(const std::string &config_file) {
+    sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
+
+    register_default_events();
+
+    create_requests();
+    create_riders();
 
     while (!sim::events.empty()) {
         Event event = sim::events.pop();

@@ -1,8 +1,11 @@
 #pragma once
 
 #include "Event.h"
-#include <functional>
+#include "util/function.h"
 
+
+// EventBus wraps a queue of Events and allows the user to
+// register and run custom callback functions for events
 class EventBus {
 public:
     [[nodiscard]] bool empty() const { return events_.empty(); }
@@ -14,24 +17,48 @@ public:
     void trigger(EventPayload payload) { dispatch({last_t_, payload}); }
 
     void dispatch(const Event &e) {
-        assert(ev.t >= last_t_);
+        // ensure monotonicity of event times
+        assert(e.t >= last_t_);
         last_t_ = e.t;
 
-        for (const auto &cb: handlers_[e.payload.index()])
-            cb(e);
+        // the event payload index corresponds to the type of the event (inferred from the variant)
+        // the callbacks for this event type are defined in a vector of callbacks, handler_
+        // the callback expects a raw void * to the callback function + the event itself
+        for (const auto &h: handlers_[e.payload.index()])
+            h.call(h.fn, e);
     }
 
     template<class PayloadT>
-        void on(void (*cb)(const PayloadT &)) {
+        void on(void (*callback)(const PayloadT &)) {
+            // there is some additional complexity in this templated function so that we are able to
+            // automatically infer the kind of the event
+            // (i.e. the user does not have to specify PayloadT since this can be inferred from the callback)
+            // we do not support capturing lambdas (non-capturing lambdas and ordinary functions are supported)
+
             constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
-            handlers_[idx].push_back([cb](const Event &e) {
-                return cb(get<PayloadT>(e.payload));
-            });
+            handlers_[idx].push_back({reinterpret_cast<void *>(callback),
+
+                                      [](void *fn, const Event &e) {
+                                          auto cb = reinterpret_cast<void (*)(const PayloadT &)>(fn);
+                                          cb(std::get<PayloadT>(e.payload));
+                                      }
+                                     });
+        }
+
+    template<class F>
+        void on(F cb) {
+            using PayloadT = first_arg_t<F>;
+            on<PayloadT>(+cb);  // +cb converts non-capturing lambda to function pointer
         }
 
 private:
-    using callback_t = std::function<void(const Event &)>;
-    std::vector<std::vector<callback_t>> handlers_{std::variant_size_v<EventPayload>};
+    struct Handler {
+        void *fn;
+
+        void (*call)(void *, const Event &);
+    };
+
+    std::vector<std::vector<Handler>> handlers_{std::variant_size_v<EventPayload>};
 
     mutable_pq<Event> events_;
 

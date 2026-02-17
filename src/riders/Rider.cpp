@@ -13,9 +13,9 @@ void Rider::login() {
     eta_pos_ = pos_;
 }
 
-void Rider::logoff() {
+void Rider::logout() {
     if (state_ == State::Dead)
-        throw std::runtime_error("rider already logged off");
+        throw std::runtime_error("rider already logged out");
 
     state_ = State::Dead;
     steps_.clear();
@@ -79,7 +79,7 @@ void Rider::schedule_next_() {
             break;
 
         case Waypoint::Kind::WaitForDropoff:
-            sim::events.trigger(ArrivedAtDropoff{waypoint.request_id});
+            sim::events.trigger(ArrivedAtDrop{waypoint.request_id});
             break;
 
         default:
@@ -88,7 +88,7 @@ void Rider::schedule_next_() {
 
 // called when the next rider waypoint is reached
 // the rider updates its position and schedules the next waypoint (if any)
-void Rider::complete_waypoint_() {
+void Rider::complete_waypoint() {
     assert(!steps_.empty() && "no waypoints to complete");
 
     auto waypoint = steps_.front().waypoint;
@@ -124,16 +124,4 @@ void Rider::recalculate_eta_at_() {
         final_waypoint_at += step.approx_duration;
 
     eta_at_ = final_waypoint_at;
-}
-
-void Rider::on_waypoint(const RiderWaypoint &event) {
-    sim::riders[event.rider_id].complete_waypoint_();
-}
-
-void Rider::on_login(const RiderLogin &event) {
-    sim::riders[event.rider_id].login();
-}
-
-void Rider::on_logout(const RiderLogout &event) {
-    sim::riders[event.rider_id].logoff();
 }

@@ -48,7 +48,7 @@ public:
 
     void login();
 
-    void logoff();
+    void logout();
 
     template<class SpanLike>
         void append_plan(const SpanLike &wps) {
@@ -57,6 +57,8 @@ public:
         }
 
     void push_waypoint(Waypoint wp);
+
+    void complete_waypoint();
 
 private:
     struct Step {
@@ -91,14 +93,5 @@ private:
 
     void schedule_next_();
 
-    void complete_waypoint_();
-
     void recalculate_eta_at_();
-
-public:
-    static void on_waypoint(const RiderWaypoint &event);
-
-    static void on_login(const RiderLogin &event);
-
-    static void on_logout(const RiderLogout &event);
 };
