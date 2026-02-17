@@ -46,7 +46,7 @@ public:
 
     [[nodiscard]] timestamp_t eta_at() const { return eta_at_; }
 
-    void login(timestamp_t now);
+    void login();
 
     void logoff();
 
@@ -96,9 +96,9 @@ private:
     void recalculate_eta_at_();
 
 public:
-    static void on_waypoint(const Event &event);
+    static void on_waypoint(const RiderWaypoint &event);
 
-    static void on_login(const Event &event);
+    static void on_login(const RiderLogin &event);
 
-    static void on_logout(const Event &event);
+    static void on_logout(const RiderLogout &event);
 };

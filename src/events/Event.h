@@ -3,38 +3,57 @@
 #include "includes.h"
 #include <variant>
 
-enum class EventType : uint16_t {
-    RequestCreated,
-    RiderLogin,
-    RiderLogout,
-    RiderWaypoint,
-
-    COUNT
-};
-
-// event payloads
-struct RequestCreated {
-    size_t request_id;
-};
-
 struct RiderPayload {
-    size_t rider_id;
+    rider_id_t rider_id;
+};
+
+struct RequestPayload {
+    request_id_t request_id;
 };
 
 struct RiderLogin : public RiderPayload {};
 struct RiderLogout : public RiderPayload {};
 struct RiderWaypoint : public RiderPayload {};
 
+struct RequestCreated : public RequestPayload {};
+struct RequestCompleted : public RequestPayload {};
+
+struct RequestAssigned {
+    request_id_t request_id;
+    rider_id_t rider_id;
+};
+
+struct FirstMileStart {
+    request_id_t request_id;
+    distance_t distance;
+};
+
+struct ArrivedAtPickup : public RequestPayload {};
+
+struct LastMileStart {
+    request_id_t request_id;
+    distance_t distance;
+};
+
+struct ArrivedAtDropoff : public RequestPayload {};
+
 using EventPayload = std::variant<
-        RequestCreated,
         RiderLogin,
         RiderLogout,
-        RiderWaypoint
+        RiderWaypoint,
+
+        RequestCreated,
+        RequestCompleted,
+        RequestAssigned,
+
+        FirstMileStart,
+        ArrivedAtPickup,
+        LastMileStart,
+        ArrivedAtDropoff
 >;
 
 struct Event {
     timestamp_t t;
-    EventType type;
     EventPayload payload;
 
     bool operator<(const Event &other) const {

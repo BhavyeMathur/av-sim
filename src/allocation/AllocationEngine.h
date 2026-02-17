@@ -5,5 +5,5 @@
 
 class AllocationEngine {
 public:
-    static void on_request(const Event &event);
+    static void on_request(const RequestCreated &event);
 };

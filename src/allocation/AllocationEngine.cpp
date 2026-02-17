@@ -5,8 +5,8 @@
 #include "routing/Distance.h"
 
 
-void AllocationEngine::on_request(const Event &event) {
-    auto request_id = get<RequestCreated>(event.payload).request_id;
+void AllocationEngine::on_request(const RequestCreated &event) {
+    auto request_id = event.request_id;
     auto &request = sim::requests[request_id];
 
     rider_id_t best_rider = -1;
@@ -34,7 +34,7 @@ void AllocationEngine::on_request(const Event &event) {
     // printf("assigning request %i to rider %i\n", request.id, best_rider);
 
     auto &rider = sim::riders[best_rider];
-    request.assign_to(rider.id());
+    sim::events.trigger(RequestAssigned{request_id, rider.id()});
 
     rider.push_waypoint({request.pick_coord, 0, request.id, Waypoint::Kind::FirstMile});
     rider.push_waypoint({request.pick_coord, 120, request.id, Waypoint::Kind::WaitForPickup});

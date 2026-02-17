@@ -1,23 +1,39 @@
 #pragma once
 
 #include "Event.h"
+#include <functional>
 
 class EventBus {
 public:
-    using callback_t = void (*)(const Event &);
+    [[nodiscard]] bool empty() const { return events_.empty(); }
 
-    EventBus() : handlers_((size_t) EventType::COUNT) {}
+    Event pop() { return events_.pop(); }
 
-    void on(EventType t, callback_t cb) {
-        handlers_[(size_t) t].push_back(cb);
+    mutable_pq<Event>::key push(Event ev) { return events_.push(ev); }
+
+    void trigger(EventPayload payload) { dispatch({last_t_, payload}); }
+
+    void dispatch(const Event &e) {
+        assert(ev.t >= last_t_);
+        last_t_ = e.t;
+
+        for (const auto &cb: handlers_[e.payload.index()])
+            cb(e);
     }
 
-    void dispatch(const Event &ev) const {
-        const auto &hs = handlers_[(size_t) ev.type];
-        for (auto callback: hs)
-            callback(ev);
-    }
+    template<class PayloadT>
+        void on(void (*cb)(const PayloadT &)) {
+            constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
+            handlers_[idx].push_back([cb](const Event &e) {
+                return cb(get<PayloadT>(e.payload));
+            });
+        }
 
 private:
-    std::vector<std::vector<callback_t>> handlers_;
+    using callback_t = std::function<void(const Event &)>;
+    std::vector<std::vector<callback_t>> handlers_{std::variant_size_v<EventPayload>};
+
+    mutable_pq<Event> events_;
+
+    timestamp_t last_t_ = 0;
 };

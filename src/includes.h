@@ -25,7 +25,7 @@ typedef float distance_t;
 typedef float speed_t;
 
 #include "util/queues.h"
-#include "events/Event.h"
+#include "events/EventBus.h"
 #include "io/SimulationConfigs.h"
 
 struct Request;
@@ -34,7 +34,7 @@ class Rider;
 
 namespace sim {
     extern thread_local SimulationConfigs configs;
-    extern thread_local mutable_pq<Event> events;
+    extern thread_local EventBus events;
 
     extern thread_local timestamp_t clock;
 

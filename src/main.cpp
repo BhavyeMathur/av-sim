@@ -11,20 +11,19 @@
 
 namespace sim {
     thread_local SimulationConfigs configs;
+    thread_local EventBus events;
 
     thread_local timestamp_t clock = 0;
 
-    thread_local mutable_pq<Event> events;
     thread_local std::vector<Request> requests;
     thread_local std::vector<Rider> riders;
 }
 
 void create_world(const std::string &config_file) {
-    EventBus dispatcher;
-    dispatcher.on(EventType::RiderLogin, Rider::on_login);
-    dispatcher.on(EventType::RiderLogout, Rider::on_logout);
-    dispatcher.on(EventType::RiderWaypoint, Rider::on_waypoint);
-    dispatcher.on(EventType::RequestCreated, AllocationEngine::on_request);
+    sim::events.on<RiderLogin>(Rider::on_login);
+    sim::events.on<RiderLogout>(Rider::on_logout);
+    sim::events.on<RiderWaypoint>(Rider::on_waypoint);
+    sim::events.on<RequestCreated>(AllocationEngine::on_request);
 
     sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
 
@@ -35,7 +34,7 @@ void create_world(const std::string &config_file) {
 
     for (const auto &req: requests_df) {
         sim::requests.emplace_back(req);
-        sim::events.push({req.created_at, EventType::RequestCreated, RequestCreated{req.id}});
+        sim::events.push({req.created_at, RequestCreated{req.id}});
     }
 
     for (const auto &r: riders_df) {
@@ -43,14 +42,14 @@ void create_world(const std::string &config_file) {
                                static_cast<coordinate_t>(r.lon)});
         sim::riders.emplace_back(rider);
 
-        sim::events.push({r.created_at, EventType::RiderLogin, RiderLogin{rider.id()}});
-        sim::events.push({r.created_at + r.lifetime, EventType::RiderLogout, RiderLogout{rider.id()}});
+        sim::events.push({r.created_at, RiderLogin{rider.id()}});
+        sim::events.push({r.created_at + r.lifetime, RiderLogout{rider.id()}});
     }
 
     while (!sim::events.empty()) {
         Event event = sim::events.pop();
         sim::clock = event.t;
-        dispatcher.dispatch(event);
+        sim::events.dispatch(event);
     }
 }
 
