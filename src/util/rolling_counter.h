@@ -1,30 +1,28 @@
 #pragma once
 
-#include "includes.h"
 #include <ringbuffer.h>
-
 
 class rolling_counter {
 public:
-    rolling_counter(duration_t window, duration_t resolution);
+    rolling_counter(uint32_t window, uint32_t resolution);
 
-    void up();
+    void up(uint32_t clock);
 
-    void down();
+    void down(uint32_t clock);
 
     [[nodiscard]] uint32_t count() const;
 
 private:
     struct Event {
-        timestamp_t at;
+        uint32_t at;
         uint32_t count;
     };
 
-    duration_t m_window;
-    duration_t m_resolution;
+    uint32_t m_window;
+    uint32_t m_resolution;
 
     uint32_t m_count = 0;
     ringbuffer<Event> m_events;
 
-    void _evict();
+    void _evict(uint32_t clock);
 };

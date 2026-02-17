@@ -9,9 +9,6 @@ RidersDataFrame::RidersDataFrame(const string &file) {
     cout << "reading " << file << endl;
     auto riders = pd::read_parquet(file);
 
-    id.resize(riders->num_rows());
-    std::iota(id.begin(), id.end(), 0);
-
     lat = pd::column_as_vector<pd::float32>(riders, "lat");
     lon = pd::column_as_vector<pd::float32>(riders, "lon");
     created_at = pd::column_as_vector<pd::uint32>(riders, "created_at");
@@ -32,7 +29,6 @@ RidersDataFrame::iterator::value_type RidersDataFrame::iterator::operator*() con
     assert(-M_PI <= df->lon[index] && df->lon[index] < M_PI);
 
     return Rider{
-            .id=df->id[index],
             .lat=df->lat[index],
             .lon=df->lon[index],
             .created_at=df->created_at[index],

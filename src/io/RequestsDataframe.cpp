@@ -20,7 +20,7 @@ RequestsDataFrame::RequestsDataFrame(const string &file) {
     drop_lat = pd::column_as_vector<pd::float32>(pings, "drop_lat");
     drop_lon = pd::column_as_vector<pd::float32>(pings, "drop_lon");
 
-    predicted_lm_dist = pd::column_as_vector<pd::float32>(pings, "lm_dist");
+    predicted_lm_dist = pd::column_as_vector<pd::float32>(pings, "predicted_lm_dist");
 }
 
 size_t RequestsDataFrame::size() const {

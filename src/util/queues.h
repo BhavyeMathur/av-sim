@@ -13,8 +13,30 @@ template<class T>
             explicit operator bool() const { return id != 0; }
         };
 
-        mutable_pq() {
+        mutable_pq()
+                : q_(key_comparator{this}, std::vector<key>{}) {
             records_.resize(1); // slot 0 unused
+        }
+
+        mutable_pq(const mutable_pq &) = delete;
+
+        mutable_pq &operator=(const mutable_pq &) = delete;
+
+        //  we must rebind comparator to the new 'this'.
+        mutable_pq(mutable_pq &&other) noexcept
+                : records_(std::move(other.records_)),
+                  freelist_(std::move(other.freelist_)),
+                  q_(key_comparator{this}, std::move(other.q_.container())) {}
+
+        mutable_pq &operator=(mutable_pq &&other) noexcept {
+            if (this == &other) return *this;
+
+            records_ = std::move(other.records_);
+            freelist_ = std::move(other.freelist_);
+
+            // rebuild q_ with comparator bound to this
+            q_ = pq_type(key_comparator{this}, std::move(other.q_.container()));
+            return *this;
         }
 
         void reserve(size_t n) {
@@ -89,14 +111,16 @@ template<class T>
         }
 
         struct key_comparator {
-            const std::vector<record> *recs;
+            const mutable_pq *owner = nullptr;
 
             bool operator()(key a, key b) const {
-                return (*recs)[a.id].value < (*recs)[b.id].value;
+                return owner->records_[b.id].value < owner->records_[a.id].value;
             }
         };
 
-        std::priority_queue<key, std::vector<key>, key_comparator> q_;
+        using pq_type = std::priority_queue<key, std::vector<key>, key_comparator>;
+
+        pq_type q_;
         std::vector<record> records_;
         std::vector<uint32_t> freelist_;
     };

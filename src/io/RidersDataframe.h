@@ -5,8 +5,6 @@
 
 struct RidersDataFrame {
     struct Rider {
-        uint32_t id;
-
         float lat, lon;
         uint32_t created_at;
         uint32_t lifetime;
@@ -14,7 +12,6 @@ struct RidersDataFrame {
         uint32_t zone_id;
     };
 
-    std::vector<uint32_t> id;
     std::vector<float> lat;
     std::vector<float> lon;
     std::vector<uint32_t> created_at;
