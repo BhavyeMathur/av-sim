@@ -1,7 +1,6 @@
 #include "SimulationConfigs.h"
 
 #include <fstream>
-#include <stdexcept>
 
 
 SimulationConfigs::SimulationConfigs(const std::string &configs) {
