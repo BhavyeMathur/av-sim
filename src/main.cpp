@@ -1,4 +1,3 @@
-#include "io/SimulationConfigs.h"
 #include "io/RequestsDataframe.h"
 #include "io/RidersDataframe.h"
 
@@ -17,22 +16,11 @@ namespace sim {
     thread_local std::vector<Rider> riders;
 }
 
-void on_rider_login(const Event &event) {
-
-}
-
-void on_rider_logout(const Event &event) {
-
-}
-
-void on_request_received(const Event &event) {
-
-}
-
 void create_world(const std::string &config_file) {
     EventBus dispatcher;
-    dispatcher.on(EventType::RiderLogin, on_rider_login);
-    dispatcher.on(EventType::RiderLogout, on_rider_logout);
+    dispatcher.on(EventType::RiderLogin, Rider::on_login);
+    dispatcher.on(EventType::RiderLogout, Rider::on_logout);
+    dispatcher.on(EventType::RiderWaypoint, Rider::on_waypoint);
 
     sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
 
@@ -47,8 +35,7 @@ void create_world(const std::string &config_file) {
     }
 
     for (const auto &rider: riders_df) {
-        sim::riders.emplace_back(static_cast<rider_id_t>(rider.id),
-                                 coordinate{static_cast<coordinate_t>(rider.lat),
+        sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(rider.lat),
                                             static_cast<coordinate_t>(rider.lon)});
 
         sim::events.push({rider.created_at, EventType::RiderLogin, RiderLogin{rider.id}});

@@ -9,6 +9,7 @@ enum class EventType : uint16_t {
     RequestCreated,
     RiderLogin,
     RiderLogout,
+    RiderWaypoint,
 
     COUNT
 };
@@ -18,18 +19,19 @@ struct OrderCreated {
     size_t order_id;
 };
 
-struct RiderLogin {
+struct RiderPayload {
     size_t rider_id;
 };
 
-struct RiderLogout {
-    size_t rider_id;
-};
+struct RiderLogin : public RiderPayload {};
+struct RiderLogout : public RiderPayload {};
+struct RiderWaypoint : public RiderPayload {};
 
 using EventPayload = std::variant<
         OrderCreated,
         RiderLogin,
-        RiderLogout
+        RiderLogout,
+        RiderWaypoint
 >;
 
 struct Event {
