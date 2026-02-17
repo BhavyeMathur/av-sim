@@ -5,7 +5,7 @@
 
 
 struct Request {
-    order_id_t id;
+    request_id_t id;
     timestamp_t created_at;
 
     coordinate pick_coord;

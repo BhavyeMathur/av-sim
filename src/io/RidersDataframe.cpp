@@ -1,7 +1,6 @@
 #include "RidersDataframe.h"
 
 #include <pandas.h>
-#include <numeric>
 
 
 using namespace std;

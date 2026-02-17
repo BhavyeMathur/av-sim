@@ -7,7 +7,7 @@
 
 
 struct RequestsDataFrame {
-    std::vector<order_id_t> id;
+    std::vector<request_id_t> id;
     std::vector<timestamp_t> created_at;
 
     std::vector<coordinate_t> pick_lat;
