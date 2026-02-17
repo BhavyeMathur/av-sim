@@ -2,6 +2,7 @@
 #include "io/RidersDataframe.h"
 
 #include "riders/Rider.h"
+#include "allocation/AllocationEngine.h"
 #include "events/EventBus.h"
 
 #include <iomanip>
@@ -21,6 +22,7 @@ void create_world(const std::string &config_file) {
     dispatcher.on(EventType::RiderLogin, Rider::on_login);
     dispatcher.on(EventType::RiderLogout, Rider::on_logout);
     dispatcher.on(EventType::RiderWaypoint, Rider::on_waypoint);
+    dispatcher.on(EventType::RequestCreated, AllocationEngine::on_request);
 
     sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
 
@@ -31,15 +33,16 @@ void create_world(const std::string &config_file) {
 
     for (const auto &req: requests_df) {
         sim::requests.emplace_back(req);
-        sim::events.push({req.created_at, EventType::RequestCreated, OrderCreated{req.id}});
+        sim::events.push({req.created_at, EventType::RequestCreated, RequestCreated{req.id}});
     }
 
-    for (const auto &rider: riders_df) {
-        sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(rider.lat),
-                                            static_cast<coordinate_t>(rider.lon)});
+    for (const auto &r: riders_df) {
+        Rider rider(coordinate{static_cast<coordinate_t>(r.lat),
+                               static_cast<coordinate_t>(r.lon)});
+        sim::riders.emplace_back(rider);
 
-        sim::events.push({rider.created_at, EventType::RiderLogin, RiderLogin{rider.id}});
-        sim::events.push({rider.created_at + rider.lifetime, EventType::RiderLogout, RiderLogout{rider.id}});
+        sim::events.push({r.created_at, EventType::RiderLogin, RiderLogin{rider.id()}});
+        sim::events.push({r.created_at + r.lifetime, EventType::RiderLogout, RiderLogout{rider.id()}});
     }
 
     while (!sim::events.empty()) {

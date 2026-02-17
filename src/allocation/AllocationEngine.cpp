@@ -1,0 +1,41 @@
+#include "AllocationEngine.h"
+
+#include "Request.h"
+#include "riders/Rider.h"
+#include "routing/Distance.h"
+
+
+void AllocationEngine::on_request(const Event &event) {
+    auto request_id = get<RequestCreated>(event.payload).request_id;
+    auto &request = sim::requests[request_id];
+
+    rider_id_t best_rider = -1;
+    distance_t best_dist = std::numeric_limits<distance_t>::max();
+
+    for (auto &rider: sim::riders) {
+        if (!rider.is_idle())
+            continue;
+
+        auto dist = sim::distance(request.pick_coord, rider.eta_pos());
+        if (dist < best_dist) {
+            best_rider = rider.id();
+            best_dist = dist;
+
+            if (dist < 3) // km
+                break;
+        }
+    }
+
+    if (best_rider == -1) {
+        // printf("dropping request %i\n", request.id);
+        return;
+    }
+
+    // printf("assigning request %i to rider %i\n", request.id, best_rider);
+
+    auto &rider = sim::riders[best_rider];
+    rider.push_waypoint(event.t, {request.pick_coord, 0, request.id, Waypoint::Kind::Pickup});
+    rider.push_waypoint(event.t, {request.pick_coord, 120, request.id, Waypoint::Kind::Wait});
+    rider.push_waypoint(event.t, {request.drop_coord, 0, request.id, Waypoint::Kind::Dropoff});
+    rider.push_waypoint(event.t, {request.drop_coord, 120, request.id, Waypoint::Kind::Wait});
+}
