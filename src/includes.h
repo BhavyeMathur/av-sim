@@ -36,6 +36,8 @@ namespace sim {
     extern thread_local SimulationConfigs configs;
     extern thread_local mutable_pq<Event> events;
 
+    extern thread_local timestamp_t clock;
+
     extern thread_local std::vector<Request> requests;
     extern thread_local std::vector<Rider> riders;
 }

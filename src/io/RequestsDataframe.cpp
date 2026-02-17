@@ -3,7 +3,6 @@
 #include <pandas.h>
 
 
-
 using namespace std;
 
 RequestsDataFrame::RequestsDataFrame(const string &file) {
@@ -39,13 +38,10 @@ RequestsDataFrame::iterator::value_type RequestsDataFrame::iterator::operator*()
     assert(-M_PI / 2 <= df->drop_lat[index] && df->drop_lat[index] < M_PI / 2);
     assert(-M_PI <= df->drop_lon[index] && df->drop_lon[index] < M_PI);
 
-    return {
-            .id = df->id[index],
-            .created_at = df->created_at[index],
-
-            .pick_coord = {df->pick_lat[index], df->pick_lon[index]},
-            .drop_coord = {df->drop_lat[index], df->drop_lon[index]},
-            .predicted_lm_dist = df->predicted_lm_dist[index],
+    return {df->id[index], df->created_at[index],
+            {df->pick_lat[index], df->pick_lon[index]},
+            {df->drop_lat[index], df->drop_lon[index]},
+            df->predicted_lm_dist[index],
     };
 }
 

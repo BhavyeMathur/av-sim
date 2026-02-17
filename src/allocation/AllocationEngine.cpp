@@ -21,7 +21,7 @@ void AllocationEngine::on_request(const Event &event) {
             best_rider = rider.id();
             best_dist = dist;
 
-            if (dist < 3) // km
+            if (dist < 2) // km
                 break;
         }
     }
@@ -34,8 +34,10 @@ void AllocationEngine::on_request(const Event &event) {
     // printf("assigning request %i to rider %i\n", request.id, best_rider);
 
     auto &rider = sim::riders[best_rider];
-    rider.push_waypoint(event.t, {request.pick_coord, 0, request.id, Waypoint::Kind::Pickup});
-    rider.push_waypoint(event.t, {request.pick_coord, 120, request.id, Waypoint::Kind::Wait});
-    rider.push_waypoint(event.t, {request.drop_coord, 0, request.id, Waypoint::Kind::Dropoff});
-    rider.push_waypoint(event.t, {request.drop_coord, 120, request.id, Waypoint::Kind::Wait});
+    request.assign_to(rider.id());
+
+    rider.push_waypoint({request.pick_coord, 0, request.id, Waypoint::Kind::FirstMile});
+    rider.push_waypoint({request.pick_coord, 120, request.id, Waypoint::Kind::WaitForPickup});
+    rider.push_waypoint({request.drop_coord, 0, request.id, Waypoint::Kind::LastMile});
+    rider.push_waypoint({request.drop_coord, 120, request.id, Waypoint::Kind::WaitForDropoff});
 }

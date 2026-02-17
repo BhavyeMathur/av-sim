@@ -14,10 +14,11 @@ struct Waypoint {
     request_id_t request_id; // optional
 
     enum class Kind : uint8_t {
-        Arrive,       // arrive at pos
-        Pickup,       // pickup action at pos
-        Dropoff,      // dropoff request_id at pos
-        Wait,         // dwell at current pos for dwell_s
+        FirstMile,
+        WaitForPickup,
+        LastMile,
+        WaitForDropoff,
+
         RepositionStart,
         RepositionEnd,
         ChargeStart,
@@ -50,12 +51,12 @@ public:
     void logoff();
 
     template<class SpanLike>
-        void append_plan(timestamp_t now, const SpanLike &wps) {
+        void append_plan(const SpanLike &wps) {
             for (const auto &wp: wps)
-                push_waypoint(now, wp);
+                push_waypoint(wp);
         }
 
-    void push_waypoint(timestamp_t now, Waypoint wp);
+    void push_waypoint(Waypoint wp);
 
 private:
     struct Step {
@@ -88,9 +89,9 @@ private:
 
     State state_ = State::Dead;
 
-    void schedule_next_(timestamp_t now);
+    void schedule_next_();
 
-    void complete_waypoint_(timestamp_t now);
+    void complete_waypoint_();
 
     void recalculate_eta_at_();
 

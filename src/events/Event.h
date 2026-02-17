@@ -3,8 +3,6 @@
 #include "includes.h"
 #include <variant>
 
-using event_id_t = uint64_t;
-
 enum class EventType : uint16_t {
     RequestCreated,
     RiderLogin,

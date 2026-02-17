@@ -12,6 +12,8 @@
 namespace sim {
     thread_local SimulationConfigs configs;
 
+    thread_local timestamp_t clock = 0;
+
     thread_local mutable_pq<Event> events;
     thread_local std::vector<Request> requests;
     thread_local std::vector<Rider> riders;
@@ -47,6 +49,7 @@ void create_world(const std::string &config_file) {
 
     while (!sim::events.empty()) {
         Event event = sim::events.pop();
+        sim::clock = event.t;
         dispatcher.dispatch(event);
     }
 }
