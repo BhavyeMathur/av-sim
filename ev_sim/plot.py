@@ -77,7 +77,6 @@ def style_plot(ax, title: str, subtitle: str = None,
         ax.text(0.0, 1.02, subtitle, transform=ax.transAxes, ha="left", va="bottom", fontsize=9, color=subtitle_color)
 
     plt.tight_layout()
-    plt.show()
 
 
 def plot_lines(*data: PlotSeries, title: str, subtitle: str = None, figsize: tuple = (10, 3),
