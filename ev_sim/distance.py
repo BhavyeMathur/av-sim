@@ -4,11 +4,11 @@ import numpy as np
 def equirectangular_distance(lat1: np.ndarray, lon1: np.ndarray,
                              lat2: np.ndarray | float, lon2: np.ndarray | float,
                              is_radians: bool = True) -> np.ndarray:
-    if is_radians:
-        lat1 = np.rad2deg(lat1)
-        lon1 = np.rad2deg(lon1)
-        lat2 = np.rad2deg(lat2)
-        lon2 = np.rad2deg(lon2)
+    if not is_radians:
+        lat1 = np.deg2rad(lat1)
+        lon1 = np.deg2rad(lon1)
+        lat2 = np.deg2rad(lat2)
+        lon2 = np.deg2rad(lon2)
 
     dlat = lat2 - lat1
     dlon = lon2 - lon1

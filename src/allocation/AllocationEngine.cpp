@@ -21,7 +21,7 @@ void AllocationEngine::on_request(const RequestCreated &event) {
             best_rider = rider.id();
             best_dist = dist;
 
-            if (dist < 2) // km
+            if (dist < 1) // km
                 break;
         }
     }
