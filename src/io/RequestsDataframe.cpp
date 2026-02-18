@@ -7,19 +7,19 @@ using namespace std;
 
 RequestsDataFrame::RequestsDataFrame(const string &file) {
     cout << "reading " << file << endl;
-    auto pings = pd::read_parquet(file);
+    auto reqs = pd::read_parquet(file);
 
-    id.resize(pings->num_rows());
+    id.resize(reqs->num_rows());
     std::iota(id.begin(), id.end(), 0);
 
-    created_at = pd::column_as_vector<pd::uint32>(pings, "created_at");
+    created_at = pd::column_as_vector<pd::uint32>(reqs, "created_at");
 
-    pick_lat = pd::column_as_vector<pd::float32>(pings, "pick_lat");
-    pick_lon = pd::column_as_vector<pd::float32>(pings, "pick_lon");
-    drop_lat = pd::column_as_vector<pd::float32>(pings, "drop_lat");
-    drop_lon = pd::column_as_vector<pd::float32>(pings, "drop_lon");
+    pick_lat = pd::column_as_vector<pd::float32>(reqs, "pick_lat");
+    pick_lon = pd::column_as_vector<pd::float32>(reqs, "pick_lon");
+    drop_lat = pd::column_as_vector<pd::float32>(reqs, "drop_lat");
+    drop_lon = pd::column_as_vector<pd::float32>(reqs, "drop_lon");
 
-    predicted_lm_dist = pd::column_as_vector<pd::float32>(pings, "predicted_lm_dist");
+    predicted_lm_dist = pd::column_as_vector<pd::float32>(reqs, "predicted_lm_dist");
 }
 
 size_t RequestsDataFrame::size() const {

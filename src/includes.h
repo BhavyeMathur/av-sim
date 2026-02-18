@@ -28,7 +28,7 @@ typedef float speed_t;
 #include "events/EventBus.h"
 #include "io/SimulationConfigs.h"
 
-struct Request;
+class Request;
 
 class Rider;
 

@@ -4,13 +4,24 @@
 #include <coordinate.h>
 
 
-struct Request {
+class Request {
+public:
     request_id_t id;
     timestamp_t created_at;
 
     coordinate pick_coord;
     coordinate drop_coord;
     distance_t predicted_lm_dist;
+
+    enum class State : uint8_t {
+        Unassigned,
+        Assigned,    // rider ID has been assigned, first-mile not yet started
+        FirstMile,   // rider is moving to pick-up location
+        PickingUp,   // rider is picking up request
+        LastMile,    // rider is moving to drop-off location
+        Dropping,    // rider is dropping off request
+        Completed,
+    };
 
     Request(request_id_t id, timestamp_t created_at, coordinate pick_coord, coordinate drop_coord,
             distance_t predicted_lm_dist)
@@ -19,6 +30,63 @@ struct Request {
               pick_coord(pick_coord),
               drop_coord(drop_coord),
               predicted_lm_dist(predicted_lm_dist) {
+    }
+
+    [[nodiscard]] State state() const { return state_; }
+
+    [[nodiscard]] rider_id_t assigned_rider() const {
+        _fail_if_not_assigned();
+        return rider_;
+    }
+
+    [[nodiscard]] distance_t assigned_fm_dist() const {
+        _fail_if_not_assigned();
+        return fm_dist_;
+    }
+
+    [[nodiscard]] distance_t assigned_lm_dist() const {
+        _fail_if_not_assigned();
+        return lm_dist_;
+    }
+
+    [[nodiscard]] timestamp_t assigned_at() const {
+        _fail_if_not_assigned();
+        return assigned_at_;
+    }
+
+    [[nodiscard]] timestamp_t started_at() const {
+        if (state_ < State::FirstMile)
+            throw std::runtime_error("request has not been started");
+
+        return start_at_;
+    }
+
+    [[nodiscard]] timestamp_t arrived_pickup_at() const {
+        if (state_ < State::PickingUp)
+            throw std::runtime_error("rider has not arrived at pickup yet");
+
+        return arrive_pickup_at_;
+    }
+
+    [[nodiscard]] timestamp_t pickedup_at() const {
+        if (state_ < State::LastMile)
+            throw std::runtime_error("rider has not picked up yet");
+
+        return pickup_at_;
+    }
+
+    [[nodiscard]] timestamp_t arrived_drop_at() const {
+        if (state_ < State::Dropping)
+            throw std::runtime_error("rider has not arrived at drop yet");
+
+        return arrive_drop_at_;
+    }
+
+    [[nodiscard]] timestamp_t completed_at() const {
+        if (state_ < State::Completed)
+            throw std::runtime_error("request has not yet been completed");
+
+        return completed_at_;
     }
 
     void assign_to(rider_id_t rider_id) {
@@ -78,13 +146,10 @@ private:
     timestamp_t arrive_drop_at_{};
     timestamp_t completed_at_{};
 
-    enum class State : uint8_t {
-        Unassigned,
-        Assigned,    // rider ID has been assigned, first-mile not yet started
-        FirstMile,   // rider is moving to pick-up location
-        PickingUp,   // rider is picking up request
-        LastMile,    // rider is moving to drop-off location
-        Dropping,    // rider is dropping off request
-        Completed,
-    } state_ = State::Unassigned;
+    State state_ = State::Unassigned;
+
+    void _fail_if_not_assigned() const {
+        if (state_ == State::Unassigned)
+            throw std::runtime_error("request has not been assigned");
+    }
 };
