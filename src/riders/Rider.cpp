@@ -1,5 +1,9 @@
+#define DEBUG false
+
 #include "Rider.h"
 #include "Request.h"
+
+#include "routing/H3.h"
 
 rider_id_t Rider::next_id_ = 0;
 
@@ -10,7 +14,7 @@ void Rider::login() {
 
     state_ = State::Idle;
     eta_at_ = last_commit_at_ = sim::clock;
-    eta_pos_ = pos_;
+    update_eta_pos_(pos_);
 }
 
 void Rider::logout() {
@@ -19,6 +23,11 @@ void Rider::logout() {
 
     state_ = State::Dead;
     steps_.clear();
+}
+
+void Rider::assign_request() {
+    n_assigned_++;
+    assert(n_assigned_ <= 3 && "rider can be assigned a maximum of three requests at a time");
 }
 
 void Rider::push_waypoint(Waypoint wp) {
@@ -30,7 +39,7 @@ void Rider::push_waypoint(Waypoint wp) {
     steps_.push_back({wp, duration});
 
     eta_at_ = std::max(sim::clock, eta_at_) + duration;
-    eta_pos_ = wp.pos;
+    update_eta_pos_(wp.pos);
 
     if (!next_scheduled_)
         schedule_next_();
@@ -89,6 +98,7 @@ void Rider::schedule_next_() {
 // called when the next rider waypoint is reached
 // the rider updates its position and schedules the next waypoint (if any)
 void Rider::complete_waypoint() {
+    debug("Rider::complete_waypoint(rider_id=%i)", id_);
     assert(!steps_.empty() && "no waypoints to complete");
 
     auto waypoint = steps_.front().waypoint;
@@ -98,8 +108,12 @@ void Rider::complete_waypoint() {
     // at the time when the waypoint is completed
     switch (waypoint.kind) {
         case Waypoint::Kind::WaitForDropoff:
+            debug("Rider::complete_waypoint() rider_id=%i – Waypoint::Kind::WaitForDropoff request_id=%i\n",
+                  id_, waypoint.request_id);
+            assert(n_assigned_ >= 1 && "rider 'n_assigned_' in invalid state");
+            n_assigned_--;
+
             sim::events.trigger(RequestCompleted{waypoint.request_id});
-            sim::requests[waypoint.request_id].mark_completed();
             break;
 
         default:
@@ -124,4 +138,11 @@ void Rider::recalculate_eta_at_() {
         final_waypoint_at += step.approx_duration;
 
     eta_at_ = final_waypoint_at;
+}
+
+void Rider::update_eta_pos_(coordinate c) {
+    eta_pos_ = c;
+    eta_hex_ = latlon_to_h3(c);
+
+    sim::events.trigger(RiderUpdatedETAPos{id_});
 }

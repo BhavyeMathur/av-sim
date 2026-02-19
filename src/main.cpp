@@ -1,3 +1,5 @@
+#define DEBUG false
+
 #include "io/RequestsDataframe.h"
 #include "io/RidersDataframe.h"
 
@@ -9,7 +11,9 @@
 #include <thread>
 
 #include <pandas.h>
+#include <tqdm.h>
 
+#define DEBUG false
 
 namespace sim {
     thread_local SimulationConfigs configs;
@@ -33,10 +37,16 @@ void register_default_events() {
     });
 
     sim::events.on([](const RiderWaypoint &event) {
+        debug("RiderWaypoint(rider_id=%i)\n", event.rider_id);
         sim::riders[event.rider_id].complete_waypoint();
     });
 
+    sim::events.on([](const RiderUpdatedETAPos &event) {
+        AllocationEngine::on_rider_updated_eta_pos(event);
+    });
+
     sim::events.on([](const RequestAssigned &event) {
+        sim::riders[event.rider_id].assign_request();
         sim::requests[event.request_id].assign_to(event.rider_id);
     });
 
@@ -146,7 +156,6 @@ void save() {
         throw std::runtime_error("Failed to write the output file to " + filepath);
 }
 
-
 void create_world(const std::string &config_file) {
     sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
 
@@ -155,12 +164,26 @@ void create_world(const std::string &config_file) {
     create_requests();
     create_riders();
 
+    AllocationEngine::init();
+
+    auto last_t = sim::requests.back().created_at;
+    timestamp_t next_t = 0;
+    tqdm::tqdm bar(last_t);
+
     while (!sim::events.empty()) {
         Event event = sim::events.pop();
         sim::clock = event.t;
         sim::events.dispatch(event);
+
+        if (sim::clock == next_t) {
+            bar.update((100 * sim::clock) / last_t);
+            next_t += 600;
+
+            debug("%i / %i (sim::clock / last_t)\n", sim::clock, last_t);
+        }
     }
 
+    bar.complete();
     save();
 }
 

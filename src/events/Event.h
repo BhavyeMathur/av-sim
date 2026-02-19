@@ -14,6 +14,7 @@ struct RequestPayload {
 struct RiderLogin : public RiderPayload {};
 struct RiderLogout : public RiderPayload {};
 struct RiderWaypoint : public RiderPayload {};
+struct RiderUpdatedETAPos : public RiderPayload {};
 
 struct RequestCreated : public RequestPayload {};
 struct RequestCompleted : public RequestPayload {};
@@ -41,6 +42,7 @@ using EventPayload = std::variant<
         RiderLogin,
         RiderLogout,
         RiderWaypoint,
+        RiderUpdatedETAPos,
 
         RequestCreated,
         RequestCompleted,

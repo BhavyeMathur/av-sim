@@ -17,7 +17,7 @@ struct RidersDataFrame {
     std::vector<uint32_t> created_at;
     std::vector<uint32_t> lifetime;
 
-    RidersDataFrame(const std::string &file);
+    explicit RidersDataFrame(const std::string &file);
 
     [[nodiscard]] size_t size() const;
 

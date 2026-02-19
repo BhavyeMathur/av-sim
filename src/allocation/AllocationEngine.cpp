@@ -1,43 +1,86 @@
+#define DEBUG false
+
 #include "AllocationEngine.h"
 
 #include "Request.h"
 #include "riders/Rider.h"
 #include "routing/Distance.h"
+#include "routing/H3.h"
 
+std::unordered_map<hex_id_t, std::unordered_set<rider_id_t>> hex_id_to_riders;
+std::vector<hex_id_t> rider_id_to_hex_id;
+
+void AllocationEngine::init() {
+    rider_id_to_hex_id.resize(sim::riders.size(), -1);
+}
 
 void AllocationEngine::on_request(const RequestCreated &event) {
+    constexpr speed_t speed_kmps = 40.0 / 3600;
+
     auto request_id = event.request_id;
-    auto &request = sim::requests[request_id];
+    auto &req = sim::requests[request_id];
 
-    rider_id_t best_rider = -1;
-    distance_t best_dist = std::numeric_limits<distance_t>::max();
+    rider_id_t best_rider = INVALID_RIDER_ID;
+    auto best_pickup_at = std::numeric_limits<timestamp_t>::max();
 
-    for (auto &rider: sim::riders) {
-        if (!rider.is_idle())
+    auto pick_hex = latlon_to_h3(req.pick_coord);
+    debug("AllocationEngine::on_request() _hex_id_to_riders[pick_hex].size() = %zu\n",
+          _hex_id_to_riders[pick_hex].size());
+
+    for (auto rider_id: hex_id_to_riders[pick_hex]) {
+        auto &rider = sim::riders[rider_id];
+
+        if (rider.n_requests_assigned() >= 2)
             continue;
 
-        auto dist = sim::distance(request.pick_coord, rider.eta_pos());
-        if (dist < best_dist) {
-            best_rider = rider.id();
-            best_dist = dist;
+        auto fm_dist_km = sim::distance(rider.eta_pos(), req.pick_coord);
 
-            if (dist < 1) // km
-                break;
-        }
+        auto fm_start_at = std::max(rider.eta_at(), sim::clock);
+        auto fm_time_s = static_cast<duration_t>(fm_dist_km / speed_kmps);
+        auto arrive_pickup_at = fm_start_at + fm_time_s;
+
+        auto pickup_at = arrive_pickup_at + 120;
+        if (pickup_at > best_pickup_at)
+            continue;
+
+        best_rider = rider.id();
+        best_pickup_at = pickup_at;
+
+        if (best_pickup_at - sim::clock <= 120)
+            break;
     }
 
-    if (best_rider == -1) {
-        // printf("dropping request %i\n", request.id);
+    if (best_rider == INVALID_RIDER_ID)
         return;
-    }
-
-    // printf("assigning request %i to rider %i\n", request.id, best_rider);
 
     auto &rider = sim::riders[best_rider];
     sim::events.trigger(RequestAssigned{request_id, rider.id()});
 
-    rider.push_waypoint({request.pick_coord, 0, request.id, Waypoint::Kind::FirstMile});
-    rider.push_waypoint({request.pick_coord, 120, request.id, Waypoint::Kind::WaitForPickup});
-    rider.push_waypoint({request.drop_coord, 0, request.id, Waypoint::Kind::LastMile});
-    rider.push_waypoint({request.drop_coord, 120, request.id, Waypoint::Kind::WaitForDropoff});
+    rider.push_waypoint({req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile});
+    rider.push_waypoint({req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup});
+    rider.push_waypoint({req.drop_coord, 0, req.id, Waypoint::Kind::LastMile});
+    rider.push_waypoint({req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
+}
+
+void AllocationEngine::on_rider_updated_eta_pos(const RiderUpdatedETAPos &event) {
+    auto rider_id = event.rider_id;
+    auto old_hex_id = rider_id_to_hex_id[rider_id];
+    auto new_hex_id = sim::riders[rider_id].eta_hex();
+
+    if (old_hex_id == new_hex_id)
+        return;
+
+    if (old_hex_id != INVALID_HEX_ID)
+        hex_id_to_riders.at(old_hex_id).erase(rider_id);
+
+    hex_id_to_riders[new_hex_id].insert(rider_id);
+    rider_id_to_hex_id[rider_id] = new_hex_id;
+
+    #if DEBUG
+    size_t n = 0;
+    for (auto &[hex_id, rider_ids] : _hex_id_to_riders)
+        n += rider_ids.size();
+
+    printf("AllocationEngine::on_rider_updated_eta_pos() total riders = %zu\n", n);
+    #endif
 }

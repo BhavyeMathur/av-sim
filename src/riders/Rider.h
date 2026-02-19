@@ -31,20 +31,21 @@ class Rider {
 public:
     explicit Rider(coordinate initial_pos)
             : id_(next_id_++),
-              pos_(initial_pos),
-              eta_pos_(initial_pos) {}
+              pos_(initial_pos) {}
 
     [[nodiscard]] rider_id_t id() const { return id_; }
 
-    [[nodiscard]] bool is_alive() const { return state_ != State::Dead; }
-
-    [[nodiscard]] bool is_idle() const { return state_ == State::Idle; }
+    [[nodiscard]] uint8_t n_requests_assigned() const { return n_assigned_; }
 
     [[nodiscard]] coordinate pos() const { return pos_; }
 
     [[nodiscard]] coordinate eta_pos() const { return eta_pos_; }
 
     [[nodiscard]] timestamp_t eta_at() const { return eta_at_; }
+
+    [[nodiscard]] hex_id_t eta_hex() const { return eta_hex_; }
+
+    void assign_request();
 
     void login();
 
@@ -60,16 +61,16 @@ public:
 
     void complete_waypoint();
 
+    enum class State : uint8_t {
+        Dead,
+        Idle,
+        Busy,
+    };
+
 private:
     struct Step {
         Waypoint waypoint;
         duration_t approx_duration; // dwell + approx travel duration
-    };
-
-    enum class State : uint8_t {
-        Dead,
-        Idle,
-        Busy
     };
 
     static rider_id_t next_id_;
@@ -83,8 +84,11 @@ private:
     timestamp_t last_commit_at_ = 0;
 
     // tail estimates (approximately estimated)
-    coordinate eta_pos_;
+    coordinate eta_pos_{};
+    hex_id_t eta_hex_{};
     timestamp_t eta_at_ = 0;
+
+    uint8_t n_assigned_ = 0;
 
     // next completion scheduling guard
     bool next_scheduled_ = false;
@@ -94,4 +98,6 @@ private:
     void schedule_next_();
 
     void recalculate_eta_at_();
+
+    void update_eta_pos_(coordinate c);
 };

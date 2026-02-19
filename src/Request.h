@@ -54,85 +54,27 @@ public:
         return assigned_at_;
     }
 
-    [[nodiscard]] timestamp_t started_at() const {
-        if (state_ < State::FirstMile)
-            throw std::runtime_error("request has not been started");
+    [[nodiscard]] timestamp_t started_at() const;
 
-        return start_at_;
-    }
+    [[nodiscard]] timestamp_t arrived_pickup_at() const;
 
-    [[nodiscard]] timestamp_t arrived_pickup_at() const {
-        if (state_ < State::PickingUp)
-            throw std::runtime_error("rider has not arrived at pickup yet");
+    [[nodiscard]] timestamp_t pickedup_at() const;
 
-        return arrive_pickup_at_;
-    }
+    [[nodiscard]] timestamp_t arrived_drop_at() const;
 
-    [[nodiscard]] timestamp_t pickedup_at() const {
-        if (state_ < State::LastMile)
-            throw std::runtime_error("rider has not picked up yet");
+    [[nodiscard]] timestamp_t completed_at() const;
 
-        return pickup_at_;
-    }
+    void assign_to(rider_id_t rider_id);
 
-    [[nodiscard]] timestamp_t arrived_drop_at() const {
-        if (state_ < State::Dropping)
-            throw std::runtime_error("rider has not arrived at drop yet");
+    void start_first_mile(distance_t distance);
 
-        return arrive_drop_at_;
-    }
+    void await_pickup();
 
-    [[nodiscard]] timestamp_t completed_at() const {
-        if (state_ < State::Completed)
-            throw std::runtime_error("request has not yet been completed");
+    void start_last_mile(distance_t distance);
 
-        return completed_at_;
-    }
+    void await_drop();
 
-    void assign_to(rider_id_t rider_id) {
-        assert(state_ == State::Unassigned);
-        state_ = State::Assigned;
-
-        rider_ = rider_id;
-        assigned_at_ = sim::clock;
-    }
-
-    void start_first_mile(distance_t distance) {
-        assert(state_ == State::Assigned);
-        state_ = State::FirstMile;
-
-        start_at_ = sim::clock;
-        fm_dist_ = distance;
-    }
-
-    void await_pickup() {
-        assert(state_ == State::FirstMile);
-        state_ = State::PickingUp;
-
-        arrive_pickup_at_ = sim::clock;
-    }
-
-    void start_last_mile(distance_t distance) {
-        assert(state_ == State::PickingUp);
-        state_ = State::LastMile;
-
-        pickup_at_ = sim::clock;
-        lm_dist_ = distance;
-    }
-
-    void await_drop() {
-        assert(state_ == State::LastMile);
-        state_ = State::Dropping;
-
-        arrive_drop_at_ = sim::clock;
-    }
-
-    void mark_completed() {
-        assert(state_ == State::Dropping);
-        state_ = State::Completed;
-
-        completed_at_ = sim::clock;
-    }
+    void mark_completed();
 
 private:
     rider_id_t rider_ = -1;

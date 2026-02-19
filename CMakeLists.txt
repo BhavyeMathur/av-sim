@@ -36,8 +36,23 @@ set_target_properties(sim PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DI
 target_include_directories(sim PUBLIC src)
 target_include_directories(sim PUBLIC src/util)
 
+# Uber H3
+fetchcontent_declare(
+        h3
+        GIT_REPOSITORY https://github.com/uber/h3.git
+        GIT_TAG v4.4.1
+        UPDATE_DISCONNECTED TRUE
+)
+fetchcontent_makeavailable(h3)
+
+target_include_directories(sim PRIVATE
+                           ${h3_SOURCE_DIR}/src
+                           ${h3_SOURCE_DIR}/src/h3lib/include
+)
+
+# other sources
 add_subdirectory(src/util/pandas)
 add_subdirectory(src/util/tqdm)
-target_link_libraries(sim PRIVATE pandas tqdm)
+target_link_libraries(sim PRIVATE pandas tqdm h3)
 
-target_compile_definitions(sim PRIVATE SIM_FEATURE_EV_CHARGING=true)
+target_compile_definitions(sim PRIVATE)

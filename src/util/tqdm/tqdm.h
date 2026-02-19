@@ -6,9 +6,10 @@
 
 class ProgressBar {
 public:
-    explicit ProgressBar(unsigned width = 50, char fill = '#');
-
     void update(unsigned percent);
+
+protected:
+    explicit ProgressBar(unsigned width = 50, char fill = '#');
 
 private:
     unsigned m_width;
