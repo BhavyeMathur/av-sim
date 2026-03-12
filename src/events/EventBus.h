@@ -25,20 +25,20 @@ public:
         // the callbacks for this event type are defined in a vector of callbacks, handler_
         // the callback expects a raw void * to the callback function + the event itself
         for (const auto &h: handlers_[e.payload.index()])
-            h.call(h.fn, e);
+            h.invoke(h.ctx, e);
     }
 
+    // free functions/non-capturing lambdas
     template<class PayloadT>
         void on(void (*callback)(const PayloadT &)) {
             // there is some additional complexity in this templated function so that we are able to
             // automatically infer the kind of the event
             // (i.e. the user does not have to specify PayloadT since this can be inferred from the callback)
             // we do not support capturing lambdas (non-capturing lambdas and ordinary functions are supported)
-
             constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
-            handlers_[idx].push_back({reinterpret_cast<void *>(callback),
 
-                                      [](void *fn, const Event &e) {
+            handlers_[idx].push_back({reinterpret_cast<void *>(callback),
+                                      [](void *fn, const Event &e) noexcept {
                                           auto cb = reinterpret_cast<void (*)(const PayloadT &)>(fn);
                                           cb(std::get<PayloadT>(e.payload));
                                       }
@@ -46,16 +46,58 @@ public:
         }
 
     template<class F>
-        void on(F cb) {
-            using PayloadT = first_arg_t<F>;
-            on<PayloadT>(+cb);  // +cb converts non-capturing lambda to function pointer
+        requires FunctionPointerLike<F>
+        void on(F &&cb) {
+            using PayloadT = first_arg_fn_t<decltype(+cb)>;
+            on<PayloadT>(+cb);
+        }
+
+    // capturing lambdas/functors by lvalue
+    template<class PayloadT, class F>
+        requires (!FunctionPointerLike<F>)
+        void on(F &cb) {
+            constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
+
+            handlers_[idx].push_back({static_cast<void *>(&cb),
+                                      [](void *p, const Event &e) noexcept {
+                                          auto &fn = *static_cast<F *>(p);
+                                          fn(std::get<PayloadT>(e.payload));
+                                      }
+                                     });
+        }
+
+    template<class F>
+        requires (!FunctionPointerLike<F>)
+        void on(F &cb) {
+            using PayloadT = first_arg_functor_t<F>;
+            on<PayloadT>(cb);
+        }
+
+    // member methods
+    template<auto Method, class C>
+        requires std::is_base_of_v<
+                typename method_traits<decltype(Method)>::class_type,
+                std::remove_reference_t<C>
+        >
+        void on(C &obj) {
+            using traits = method_traits<decltype(Method)>;
+            using PayloadT = typename traits::arg_type;
+
+            constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
+
+            handlers_[idx].push_back({static_cast<void *>(&obj),
+                                      [](void *p, const Event &e) noexcept {
+                                          auto &self = *static_cast<C *>(p);
+                                          (self.*Method)(std::get<PayloadT>(e.payload));
+                                      }
+                                     });
         }
 
 private:
     struct Handler {
-        void *fn;
+        void *ctx = nullptr;
 
-        void (*call)(void *, const Event &);
+        void (*invoke)(void *, const Event &) noexcept = nullptr;
     };
 
     std::vector<std::vector<Handler>> handlers_{std::variant_size_v<EventPayload>};

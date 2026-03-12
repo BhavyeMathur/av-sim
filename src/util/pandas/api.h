@@ -14,22 +14,22 @@
 #include <parquet/arrow/writer.h>
 
 namespace {
-    template <typename T>
+    template<typename T>
         std::shared_ptr<arrow::DataType> arrow_type() {
             using U = std::decay_t<T>;
 
-            if constexpr (std::is_same_v<U, bool>)               return arrow::boolean();
-            else if constexpr (std::is_same_v<U, int8_t>)        return arrow::int8();
-            else if constexpr (std::is_same_v<U, uint8_t>)       return arrow::uint8();
-            else if constexpr (std::is_same_v<U, int16_t>)       return arrow::int16();
-            else if constexpr (std::is_same_v<U, uint16_t>)      return arrow::uint16();
-            else if constexpr (std::is_same_v<U, int32_t>)       return arrow::int32();
-            else if constexpr (std::is_same_v<U, uint32_t>)      return arrow::uint32();
-            else if constexpr (std::is_same_v<U, int64_t>)       return arrow::int64();
-            else if constexpr (std::is_same_v<U, uint64_t>)      return arrow::uint64();
-            else if constexpr (std::is_same_v<U, float>)         return arrow::float32();
-            else if constexpr (std::is_same_v<U, double>)        return arrow::float64();
-            else if constexpr (std::is_same_v<U, std::string>)   return arrow::utf8();
+            if constexpr (std::is_same_v<U, bool>) return arrow::boolean();
+            else if constexpr (std::is_same_v<U, int8_t>) return arrow::int8();
+            else if constexpr (std::is_same_v<U, uint8_t>) return arrow::uint8();
+            else if constexpr (std::is_same_v<U, int16_t>) return arrow::int16();
+            else if constexpr (std::is_same_v<U, uint16_t>) return arrow::uint16();
+            else if constexpr (std::is_same_v<U, int32_t>) return arrow::int32();
+            else if constexpr (std::is_same_v<U, uint32_t>) return arrow::uint32();
+            else if constexpr (std::is_same_v<U, int64_t>) return arrow::int64();
+            else if constexpr (std::is_same_v<U, uint64_t>) return arrow::uint64();
+            else if constexpr (std::is_same_v<U, float>) return arrow::float32();
+            else if constexpr (std::is_same_v<U, double>) return arrow::float64();
+            else if constexpr (std::is_same_v<U, std::string>) return arrow::utf8();
         }
 }
 
@@ -50,6 +50,13 @@ namespace pd {
     typedef arrow::UInt16Scalar uint16;
     typedef arrow::UInt32Scalar uint32;
     typedef arrow::UInt64Scalar uint64;
+
+    struct AnyColumn {
+        std::string name;
+        std::shared_ptr<arrow::DataType> type;
+        int64_t size = 0;
+        std::function<arrow::Result<std::shared_ptr<arrow::Array>>()> make_array;
+    };
 
     template<typename ArrowArrayType, typename CType = ArrowArrayType::ValueType>
         std::vector<CType> column_as_vector(std::shared_ptr<arrow::Table> &df,
@@ -96,7 +103,7 @@ namespace pd {
                 return arr;
             }
 
-            // -------- boolean --------
+                // -------- boolean --------
             else if constexpr (std::is_same_v<U, bool>) {
                 arrow::BooleanBuilder builder;
                 ARROW_RETURN_NOT_OK(builder.AppendValues(data));
@@ -105,19 +112,19 @@ namespace pd {
                 return arr;
             }
 
-            // -------- numeric --------
+                // -------- numeric --------
             else if constexpr (std::is_integral_v<U> || std::is_floating_point_v<U>) {
                 using BuilderT =
                         std::conditional_t<std::is_same_v<U, int8_t>, arrow::Int8Builder,
-                        std::conditional_t<std::is_same_v<U, uint8_t>, arrow::UInt8Builder,
-                        std::conditional_t<std::is_same_v<U, int16_t>, arrow::Int16Builder,
-                        std::conditional_t<std::is_same_v<U, uint16_t>, arrow::UInt16Builder,
-                        std::conditional_t<std::is_same_v<U, int32_t>, arrow::Int32Builder,
-                        std::conditional_t<std::is_same_v<U, uint32_t>, arrow::UInt32Builder,
-                        std::conditional_t<std::is_same_v<U, int64_t>, arrow::Int64Builder,
-                        std::conditional_t<std::is_same_v<U, uint64_t>, arrow::UInt64Builder,
-                        std::conditional_t<std::is_same_v<U, float>, arrow::FloatBuilder,
-                        std::conditional_t<std::is_same_v<U, double>, arrow::DoubleBuilder, void>>>>>>>>>>;
+                                std::conditional_t<std::is_same_v<U, uint8_t>, arrow::UInt8Builder,
+                                        std::conditional_t<std::is_same_v<U, int16_t>, arrow::Int16Builder,
+                                                std::conditional_t<std::is_same_v<U, uint16_t>, arrow::UInt16Builder,
+                                                        std::conditional_t<std::is_same_v<U, int32_t>, arrow::Int32Builder,
+                                                                std::conditional_t<std::is_same_v<U, uint32_t>, arrow::UInt32Builder,
+                                                                        std::conditional_t<std::is_same_v<U, int64_t>, arrow::Int64Builder,
+                                                                                std::conditional_t<std::is_same_v<U, uint64_t>, arrow::UInt64Builder,
+                                                                                        std::conditional_t<std::is_same_v<U, float>, arrow::FloatBuilder,
+                                                                                                std::conditional_t<std::is_same_v<U, double>, arrow::DoubleBuilder, void>>>>>>>>>>;
 
                 BuilderT builder;
                 ARROW_RETURN_NOT_OK(builder.AppendValues(data.data(),
@@ -131,13 +138,30 @@ namespace pd {
                 return arrow::Status::Invalid("Unsupported type for vector_as_column()");
         }
 
-    template <typename Name, typename T>
-        std::pair<std::string, const std::vector<T>&> col(Name &&name, const std::vector<T> &v) {
-            return { std::string(std::forward<Name>(name)), v };
+    template<typename Name, typename T>
+        std::pair<std::string, const std::vector<T> &> col(Name &&name, const std::vector<T> &v) {
+            return {std::string(std::forward<Name>(name)), v};
         }
 
-    template <typename Name, typename... T>
-        std::shared_ptr<arrow::Schema> make_schema(const std::pair<Name, const std::vector<T>&> &...cols) {
+    template<typename Name, typename T>
+        AnyColumn any_col(const std::pair<Name, const std::vector<T> &> &c) {
+            return AnyColumn{
+                    .name = std::string(c.first),
+                    .type = arrow_type<T>(),
+                    .size = static_cast<int64_t>(c.second.size()),
+                    .make_array = [&vec = c.second]() -> arrow::Result<std::shared_ptr<arrow::Array>> {
+                        return vector_as_column(vec);
+                    }
+            };
+        }
+
+    template<typename Name, typename T>
+        AnyColumn col_dynamic(Name &&name, const std::vector<T> &v) {
+            return any_col(col(std::forward<Name>(name), v));
+        }
+
+    template<typename Name, typename... T>
+        std::shared_ptr<arrow::Schema> make_schema(const std::pair<Name, const std::vector<T> &> &...cols) {
             std::vector<std::shared_ptr<arrow::Field>> fields;
             fields.reserve(sizeof...(T));
             (fields.emplace_back(
@@ -146,9 +170,19 @@ namespace pd {
             return arrow::schema(std::move(fields));
         }
 
-    template <typename Name, typename... T>
+    inline std::shared_ptr<arrow::Schema> make_schema(const std::vector<AnyColumn> &cols) {
+        std::vector<std::shared_ptr<arrow::Field>> fields;
+        fields.reserve(cols.size());
+
+        for (const auto &c: cols)
+            fields.emplace_back(arrow::field(c.name, c.type));
+
+        return arrow::schema(std::move(fields));
+    }
+
+    template<typename Name, typename... T>
         arrow::Result<std::vector<std::shared_ptr<arrow::Array>>>
-                make_columns(const std::pair<Name, const std::vector<T>&> &...cols) {
+        make_columns(const std::pair<Name, const std::vector<T> &> &...cols) {
             std::vector<std::shared_ptr<arrow::Array>> arrays;
             arrays.reserve(sizeof...(T));
 
@@ -166,20 +200,44 @@ namespace pd {
             return arrays;
         }
 
-    template <typename Name, typename... T>
-        arrow::Result<std::shared_ptr<arrow::Table>> make_table(const std::pair<Name, const std::vector<T>&> &...cols) {
-            const auto nrows = static_cast<int64_t>(std::get<1>(std::tie(cols...)).second.size());
-            if (!((static_cast<int64_t>(cols.second.size()) == nrows) && ...))
-                return arrow::Status::Invalid("All columns must have the same length");
+    inline arrow::Result<std::vector<std::shared_ptr<arrow::Array>>> make_columns(const std::vector<AnyColumn> &cols) {
+        std::vector<std::shared_ptr<arrow::Array>> arrays;
+        arrays.reserve(cols.size());
 
-            auto schema = make_schema(cols...);
-            ARROW_ASSIGN_OR_RAISE(auto arrays, make_columns(cols...))
-
-            return arrow::Table::Make(std::move(schema), std::move(arrays), nrows);
+        for (const auto &c: cols) {
+            ARROW_ASSIGN_OR_RAISE(auto arr, c.make_array());
+            arrays.emplace_back(std::move(arr));
         }
 
-    arrow::Status write_table_to_parquet(const std::shared_ptr<arrow::Table>& table,
-                                         const std::string& filename,
+        return arrays;
+    }
+
+    inline arrow::Result<std::shared_ptr<arrow::Table>> make_table(const std::vector<AnyColumn> &cols) {
+        if (cols.empty())
+            return arrow::Status::Invalid("Need at least one column");
+
+        const auto nrows = cols.front().size;
+        for (const auto &c: cols)
+            if (c.size != nrows)
+                return arrow::Status::Invalid("All columns must have the same length");
+
+        auto schema = make_schema(cols);
+        ARROW_ASSIGN_OR_RAISE(auto arrays, make_columns(cols))
+
+        return arrow::Table::Make(std::move(schema), arrays, nrows);
+    }
+
+    template<typename Name, typename... T>
+        arrow::Result<std::shared_ptr<arrow::Table>>
+        make_table(const std::pair<Name, const std::vector<T> &> &... cols) {
+            std::vector<AnyColumn> dynamic_cols;
+            dynamic_cols.reserve(sizeof...(T));
+            (dynamic_cols.emplace_back(any_col(cols)), ...);
+            return make_table(dynamic_cols);
+        }
+
+    arrow::Status write_table_to_parquet(const std::shared_ptr<arrow::Table> &table,
+                                         const std::string &filename,
                                          parquet::Compression::type compression = parquet::Compression::SNAPPY,
                                          int64_t chunk_size = 64 * 1024);
 }

@@ -4,6 +4,7 @@
 #include "io/RidersDataframe.h"
 
 #include "riders/Rider.h"
+#include "riders/FleetStats.h"
 #include "allocation/AllocationEngine.h"
 #include "events/EventBus.h"
 
@@ -12,8 +13,6 @@
 
 #include <pandas.h>
 #include <tqdm.h>
-
-#define DEBUG false
 
 namespace sim {
     thread_local SimulationConfigs configs;
@@ -151,7 +150,7 @@ void save() {
                                 pd::col("completed_at", completed_at),
                                 pd::col("assigned_rider", assigned_to)).ValueOrDie();
 
-    auto filepath = sim::configs.get<std::string>("output");
+    auto filepath = sim::configs.get<std::string>("output") + ".parquet";
     if (!pd::write_table_to_parquet(table, filepath).ok())
         throw std::runtime_error("Failed to write the output file to " + filepath);
 }
@@ -165,6 +164,14 @@ void create_world(const std::string &config_file) {
     create_riders();
 
     AllocationEngine::init();
+
+    // CUSTOM HOOKS -----
+
+    FleetStats();
+
+    // ------------------
+
+    sim::events.trigger(SimStart{});
 
     auto last_t = sim::requests.back().created_at;
     timestamp_t next_t = 0;
@@ -183,6 +190,7 @@ void create_world(const std::string &config_file) {
         }
     }
 
+    sim::events.trigger(SimComplete{});
     bar.complete();
     save();
 }

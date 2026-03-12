@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <numeric>
+#include <array>
 
 #include <coordinate.h>
 
@@ -28,13 +29,15 @@ typedef float speed_t;
 static constexpr auto INVALID_HEX_ID = static_cast<hex_id_t >(-1);
 static constexpr auto INVALID_RIDER_ID = static_cast<rider_id_t>(-1);
 
+class Request;
+
+enum class _RiderState : uint8_t;
+
+class Rider;
+
 #include "util/queues.h"
 #include "events/EventBus.h"
 #include "io/SimulationConfigs.h"
-
-class Request;
-
-class Rider;
 
 namespace sim {
     extern thread_local SimulationConfigs configs;

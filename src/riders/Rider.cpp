@@ -14,7 +14,7 @@ void Rider::login() {
 
     state_ = State::Idle;
     eta_at_ = last_commit_at_ = sim::clock;
-    update_eta_pos_(pos_);
+    update_eta_pos_(0, pos_);
 }
 
 void Rider::logout() {
@@ -39,7 +39,7 @@ void Rider::push_waypoint(Waypoint wp) {
     steps_.push_back({wp, duration});
 
     eta_at_ = std::max(sim::clock, eta_at_) + duration;
-    update_eta_pos_(wp.pos);
+    update_eta_pos_(distance, wp.pos);
 
     if (!next_scheduled_)
         schedule_next_();
@@ -53,13 +53,9 @@ void Rider::schedule_next_() {
     // and return after setting next_scheduled_ = false;
     if (steps_.empty()) {
         next_scheduled_ = false;
-        state_ = (state_ == State::Dead) ? State::Dead : State::Idle;
+        set_state_if_not_dead_(State::Idle);
         return;
     }
-
-    // if there are more stepsxs, rider should be marked busy if they were previously idle
-    if (state_ == State::Idle)
-        state_ = State::Busy;
 
     // otherwise we calculate the completion time of the next waypoint
     // by adding dwell_time + actual_eta (movement time)
@@ -76,18 +72,22 @@ void Rider::schedule_next_() {
     // at the time when the waypoint is scheduled
     switch (waypoint.kind) {
         case Waypoint::Kind::FirstMile:
+            set_state_if_not_dead_(State::FirstMile);
             sim::events.trigger(FirstMileStart{waypoint.request_id, distance});
             break;
 
         case Waypoint::Kind::WaitForPickup:
+            set_state_if_not_dead_(State::PickingUp);
             sim::events.trigger(ArrivedAtPickup{waypoint.request_id});
             break;
 
         case Waypoint::Kind::LastMile:
+            set_state_if_not_dead_(State::LastMile);
             sim::events.trigger(LastMileStart{waypoint.request_id, distance});
             break;
 
         case Waypoint::Kind::WaitForDropoff:
+            set_state_if_not_dead_(State::DroppingOff);
             sim::events.trigger(ArrivedAtDrop{waypoint.request_id});
             break;
 
@@ -140,9 +140,43 @@ void Rider::recalculate_eta_at_() {
     eta_at_ = final_waypoint_at;
 }
 
-void Rider::update_eta_pos_(coordinate c) {
+void Rider::update_eta_pos_(distance_t d, coordinate c) {
     eta_pos_ = c;
     eta_hex_ = latlon_to_h3(c);
 
-    sim::events.trigger(RiderUpdatedETAPos{id_});
+    sim::events.trigger(RiderUpdatedETAPos{id_, d});
+}
+
+void Rider::set_state_if_not_dead_(State state) {
+    if (state_ == State::Dead)
+        return;
+
+    sim::events.trigger(RiderStateChange{id_, state_, state});
+    state_ = state;
+}
+
+std::string Rider::state_to_string(Rider::State state) {
+    switch (state) {
+        case State::Dead:
+            return "dead";
+        case State::Idle:
+            return "idle";
+
+        case State::FirstMile:
+            return "fm";
+        case State::PickingUp:
+            return "wait";
+        case State::LastMile:
+            return "lm";
+        case State::DroppingOff:
+            return "drop";
+
+        case State::Repositioning:
+            return "service";
+        case State::Charging:
+            return "charge";
+
+        case State::SIZE:
+            throw std::invalid_argument("invalid state");
+    }
 }

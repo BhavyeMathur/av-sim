@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import pandas as pd
+import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -21,6 +22,12 @@ class PlotSeries:
     style: str = "solid"
     width: int = 1.5
     legend: bool = True
+
+
+@dataclass
+class SeriesStyling:
+    label: str
+    color: str
 
 
 def _format_datetime_axis(ax: plt.Axes, spine_color: str):
@@ -57,8 +64,10 @@ def _format_datetime_axis(ax: plt.Axes, spine_color: str):
     ax.tick_params(axis="x", which="minor", labelsize=8, pad=2, colors=spine_color)
     ax.tick_params(axis="x", which="major", length=0)
 
+
 def _is_datetime_axis(ax):
     return isinstance(ax.xaxis.get_converter(), mdates.DateConverter)
+
 
 def style_plot(ax, title: str, subtitle: str = None,
                spine_color="#7b8290", grid_color="#374151", title_color="#111827", subtitle_color="#6b7280"):
@@ -96,4 +105,81 @@ def plot_lines(*data: PlotSeries, title: str, subtitle: str = None, figsize: tup
     style_plot(ax, title, subtitle, spine_color, grid_color, title_color, subtitle_color)
 
 
-__all__ = ["PlotSeries", "plot_lines", "style_plot"]
+def _map_values_to_slot(v, xmin, xmax, left, right):
+    # maps v in [xmin,xmax] -> v' in [left,right]
+    return left + (v - xmin) * (right - left) / (xmax - xmin)
+
+
+def plot_histogram_on_axis(data, ax, styles, title: str = "", bins: int = 100, subtitle: str = "",
+                           legend: bool = None, minimal: bool = False, **kwargs):
+    series = data.columns
+
+    ax.hist([data[s] for s in series],
+            color=[styles[s].color for s in series],
+            label=[styles[s].label for s in series],
+            stacked=True, bins=bins, **kwargs)
+
+    if minimal:
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.spines["left"].set_visible(False)
+
+    if legend is True or not minimal:
+        ax.legend()
+
+    style_plot(ax, title=title, subtitle=subtitle)
+
+
+def plot_evolving_histograms(data, index, styles, title: str = "", k: int = 6, subtitle: str = ""):
+    fig = plt.figure(figsize=(12, 6))
+    gs = fig.add_gridspec(2, 1, height_ratios=[2, 1], hspace=0.2, wspace=0.1)
+
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1])
+    ax2_hist = ax2.twinx()
+
+    # ----------------
+    # main histogram
+    ax1.set_yticklabels([])
+    plot_histogram_on_axis(data, ax1, styles, title=title, subtitle=subtitle, bins=200)
+
+    # ----------------
+    # rolling mean plot
+    for s in data.columns:
+        y = pd.Series(data[s].values, index=index).sort_index()
+        bins = np.linspace(index.min(), index.max(), 100)
+
+        y_rm = y.groupby(pd.cut(y.index, bins=bins)).mean()
+        x = bins[:-1][:len(y_rm)]
+
+        ax2.plot(x, y_rm, color=styles[s].color, linewidth=1.5, label=styles[s].label)
+
+    style_plot(ax2, title="", grid_color="#fff")
+
+    # ----------------
+    # smaller panel of evolving histograms
+    bins_per_slot = 50
+    edges = np.linspace(index.min(), index.max(), k + 1)
+
+    for i in range(k):
+        left, right = edges[i], edges[i + 1]
+        mask = (index >= left) & (index < right)
+
+        mock = []
+        for s in data.columns:
+            xmin = np.quantile(data[s], 0.01) * 0.5
+            xmax = np.quantile(data[s], 0.99) * 1.5
+
+            v = data.loc[mask, s].to_numpy()
+            v = v[(v > xmin) & (v < xmax)]
+            mock.append(_map_values_to_slot(v, xmin, xmax, left, right))
+
+        slot_bins = np.linspace(left, right, bins_per_slot + 1)
+        ax2_hist.hist(mock, bins=slot_bins, stacked=True, color=[styles[s].color for s in data.columns], alpha=0.4)
+
+    style_plot(ax2_hist, title="")
+    ax2_hist.yaxis.set_visible(False)
+
+
+__all__ = ["PlotSeries", "SeriesStyling",
+           "plot_lines", "style_plot", "plot_histogram_on_axis", "plot_evolving_histograms"]

@@ -3,6 +3,9 @@
 #include "includes.h"
 #include <variant>
 
+struct SimStart {};
+struct SimComplete {};
+
 struct RiderPayload {
     rider_id_t rider_id;
 };
@@ -14,7 +17,17 @@ struct RequestPayload {
 struct RiderLogin : public RiderPayload {};
 struct RiderLogout : public RiderPayload {};
 struct RiderWaypoint : public RiderPayload {};
-struct RiderUpdatedETAPos : public RiderPayload {};
+
+struct RiderUpdatedETAPos {
+    rider_id_t rider_id;
+    distance_t distance;  // approximated distance from previous ETA pos
+};
+
+struct RiderStateChange {
+    rider_id_t rider_id;
+    _RiderState old_state;
+    _RiderState new_state;
+};
 
 struct RequestCreated : public RequestPayload {};
 struct RequestCompleted : public RequestPayload {};
@@ -39,9 +52,13 @@ struct LastMileStart {
 struct ArrivedAtDrop : public RequestPayload {};
 
 using EventPayload = std::variant<
+        SimStart,
+        SimComplete,
+
         RiderLogin,
         RiderLogout,
         RiderWaypoint,
+        RiderStateChange,
         RiderUpdatedETAPos,
 
         RequestCreated,

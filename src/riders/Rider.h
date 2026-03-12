@@ -26,9 +26,26 @@ struct Waypoint {
     } kind;
 };
 
+enum class _RiderState : uint8_t {
+    Dead,
+    Idle,
+
+    FirstMile,
+    PickingUp,
+    LastMile,
+    DroppingOff,
+
+    Repositioning,
+    Charging,
+
+    SIZE
+};
+
 
 class Rider {
 public:
+    using State = _RiderState;
+
     explicit Rider(coordinate initial_pos)
             : id_(next_id_++),
               pos_(initial_pos) {}
@@ -61,11 +78,7 @@ public:
 
     void complete_waypoint();
 
-    enum class State : uint8_t {
-        Dead,
-        Idle,
-        Busy,
-    };
+    static std::string state_to_string(State state);
 
 private:
     struct Step {
@@ -99,5 +112,7 @@ private:
 
     void recalculate_eta_at_();
 
-    void update_eta_pos_(coordinate c);
+    void update_eta_pos_(distance_t d, coordinate c);
+
+    void set_state_if_not_dead_(State state);
 };

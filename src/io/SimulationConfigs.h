@@ -15,9 +15,9 @@ public:
         T get(const std::string &key) const {
             auto it = m_configs.find(key);
             if (it == m_configs.end())
-                throw std::runtime_error("SimulationConfigs: key not found: " + key);
+                throw std::out_of_range("SimulationConfigs: key not found: " + key);
 
-            const std::string& raw = it->second;
+            const std::string &raw = it->second;
 
             std::istringstream iss(raw);
             T value;
@@ -32,6 +32,14 @@ public:
                                          key + "': '" + raw + "'");
 
             return value;
+        }
+
+    template<typename T>
+        T get(const std::string &key, T default_) const {
+            try { return get<T>(key); }
+            catch (std::out_of_range &) {}
+
+            return default_;
         }
 
 private:

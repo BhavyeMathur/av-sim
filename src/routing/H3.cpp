@@ -2,7 +2,7 @@
 #include "h3api.h"
 
 
-static constexpr int H3_RESOLUTION = 7;
+static constexpr int H3_RESOLUTION = 6;
 
 uint64_t latlon_to_h3(coordinate c) {
     LatLng g{c.lat, c.lon};
