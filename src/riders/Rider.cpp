@@ -91,6 +91,11 @@ void Rider::schedule_next_() {
             sim::events.trigger(ArrivedAtDrop{waypoint.request_id});
             break;
 
+        case Waypoint::Kind::ChargeStart:
+        case Waypoint::Kind::ChargeDone:
+            set_state_if_not_dead_(State::Charging);
+            break;
+
         default:
     }
 }
@@ -114,6 +119,10 @@ void Rider::complete_waypoint() {
             n_assigned_--;
 
             sim::events.trigger(RequestCompleted{waypoint.request_id});
+            break;
+
+        case Waypoint::Kind::ChargeDone:
+            sim::events.trigger(RiderChargeComplete{id_});
             break;
 
         default:

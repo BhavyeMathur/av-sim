@@ -6,6 +6,10 @@ coordinate coordinate::lerp(const coordinate &other, float t) const {
             lon * (1 - t) + other.lon * t};
 }
 
+bool coordinate::operator==(const coordinate &other) const {
+    return lat == other.lat and lon == other.lon;
+}
+
 coordinate coordinate::operator+(const coordinate &other) const {
     return {lat + other.lat, lon + other.lon};
 }

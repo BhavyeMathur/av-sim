@@ -29,6 +29,10 @@ struct RiderStateChange {
     _RiderState new_state;
 };
 
+struct RiderChargeComplete {
+    rider_id_t rider_id;
+};
+
 struct RequestCreated : public RequestPayload {};
 struct RequestCompleted : public RequestPayload {};
 
@@ -60,6 +64,7 @@ using EventPayload = std::variant<
         RiderWaypoint,
         RiderStateChange,
         RiderUpdatedETAPos,
+        RiderChargeComplete,
 
         RequestCreated,
         RequestCompleted,

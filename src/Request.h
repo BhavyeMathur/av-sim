@@ -13,6 +13,8 @@ public:
     coordinate drop_coord;
     distance_t predicted_lm_dist;
 
+    uint8_t pax;
+
     enum class State : uint8_t {
         Unassigned,
         Assigned,    // rider ID has been assigned, first-mile not yet started
@@ -24,12 +26,13 @@ public:
     };
 
     Request(request_id_t id, timestamp_t created_at, coordinate pick_coord, coordinate drop_coord,
-            distance_t predicted_lm_dist)
+            distance_t predicted_lm_dist, uint8_t pax)
             : id(id),
               created_at(created_at),
               pick_coord(pick_coord),
               drop_coord(drop_coord),
-              predicted_lm_dist(predicted_lm_dist) {
+              predicted_lm_dist(predicted_lm_dist),
+              pax(pax) {
     }
 
     [[nodiscard]] State state() const { return state_; }

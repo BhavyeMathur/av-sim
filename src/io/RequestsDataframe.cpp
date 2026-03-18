@@ -20,6 +20,7 @@ RequestsDataFrame::RequestsDataFrame(const string &file) {
     drop_lon = pd::column_as_vector<pd::float32>(reqs, "drop_lon");
 
     predicted_lm_dist = pd::column_as_vector<pd::float32>(reqs, "predicted_lm_dist");
+    pax = pd::column_as_vector<pd::uint8>(reqs, "pax");
 }
 
 size_t RequestsDataFrame::size() const {
@@ -41,7 +42,7 @@ RequestsDataFrame::iterator::value_type RequestsDataFrame::iterator::operator*()
     return {df->id[index], df->created_at[index],
             {df->pick_lat[index], df->pick_lon[index]},
             {df->drop_lat[index], df->drop_lon[index]},
-            df->predicted_lm_dist[index],
+            df->predicted_lm_dist[index], df->pax[index]
     };
 }
 

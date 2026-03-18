@@ -5,6 +5,9 @@ speed_t SPEED_KMPH = 40;
 speed_t SPEED_KMPS = SPEED_KMPH / 3600;
 
 std::pair<distance_t , duration_t> approx_eta(const coordinate &start_pos, const coordinate &dst_pos) {
+    if (start_pos == dst_pos)
+        return {0, 0};
+
     auto dist = sim::distance(start_pos, dst_pos);
     return {dist, dist / SPEED_KMPS};
 }

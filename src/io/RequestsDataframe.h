@@ -16,6 +16,7 @@ struct RequestsDataFrame {
     std::vector<coordinate_t> drop_lon;
 
     std::vector<distance_t> predicted_lm_dist;
+    std::vector<uint8_t> pax;
 
     explicit RequestsDataFrame(const std::string &file);
 

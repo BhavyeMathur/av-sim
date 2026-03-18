@@ -4,14 +4,21 @@
 
 #include "Request.h"
 #include "riders/Rider.h"
+#include "riders/RiderBattery.h"
+#include "riders/RiderPAX.h"
 #include "routing/Distance.h"
 #include "routing/H3.h"
 
+// TODO we cannot use global variables these will clash between threads
 std::unordered_map<hex_id_t, std::unordered_set<rider_id_t>> hex_id_to_riders;
 std::vector<hex_id_t> rider_id_to_hex_id;
+RiderBattery rider_battery;
+RiderPAX rider_pax;
 
 void AllocationEngine::init() {
     rider_id_to_hex_id.resize(sim::riders.size(), -1);
+    rider_battery.init();
+    rider_pax.init();
 }
 
 void AllocationEngine::on_request(const RequestCreated &event) {
@@ -25,7 +32,7 @@ void AllocationEngine::on_request(const RequestCreated &event) {
 
     auto pick_hex = latlon_to_h3(req.pick_coord);
     debug("AllocationEngine::on_request() _hex_id_to_riders[pick_hex].size() = %zu\n",
-          _hex_id_to_riders[pick_hex].size());
+          hex_id_to_riders[pick_hex].size());
 
     for (auto rider_id: hex_id_to_riders[pick_hex]) {
         auto &rider = sim::riders[rider_id];
@@ -34,6 +41,18 @@ void AllocationEngine::on_request(const RequestCreated &event) {
             continue;
 
         auto fm_dist_km = sim::distance(rider.eta_pos(), req.pick_coord);
+
+        // TODO we want to make the allocation engine more modular rather than hard-coding these checks here
+        if (!rider_battery.check_capacity(rider_id, fm_dist_km + req.predicted_lm_dist))
+            continue;
+
+        auto pax = rider_pax.capacity(rider_id);
+        if (pax == 1 and req.pax != 1)
+            continue;
+        if (pax == 2 and req.pax > 2)
+            continue;
+        if (pax == 4 and req.pax <= 2)
+            continue;
 
         auto fm_start_at = std::max(rider.eta_at(), sim::clock);
         auto fm_time_s = static_cast<duration_t>(fm_dist_km / speed_kmps);
@@ -60,6 +79,8 @@ void AllocationEngine::on_request(const RequestCreated &event) {
     rider.push_waypoint({req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup});
     rider.push_waypoint({req.drop_coord, 0, req.id, Waypoint::Kind::LastMile});
     rider.push_waypoint({req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
+
+    rider_battery.charge(rider);
 }
 
 void AllocationEngine::on_rider_updated_eta_pos(const RiderUpdatedETAPos &event) {
@@ -78,7 +99,7 @@ void AllocationEngine::on_rider_updated_eta_pos(const RiderUpdatedETAPos &event)
 
     #if DEBUG
     size_t n = 0;
-    for (auto &[hex_id, rider_ids] : _hex_id_to_riders)
+    for (auto &[hex_id, rider_ids]: hex_id_to_riders)
         n += rider_ids.size();
 
     printf("AllocationEngine::on_rider_updated_eta_pos() total riders = %zu\n", n);

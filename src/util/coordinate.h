@@ -11,6 +11,8 @@ struct coordinate {
 
     [[nodiscard]] coordinate lerp(const coordinate &other, float t) const;
 
+    bool operator==(const coordinate &other) const;
+
     coordinate operator+(const coordinate &other) const;
 
     coordinate operator-(const coordinate &other) const;

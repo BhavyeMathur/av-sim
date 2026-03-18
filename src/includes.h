@@ -27,6 +27,7 @@ typedef uint64_t hex_id_t;
 typedef float speed_t;
 
 static constexpr auto INVALID_HEX_ID = static_cast<hex_id_t >(-1);
+static constexpr auto INVALID_REQ_ID = static_cast<request_id_t>(-1);
 static constexpr auto INVALID_RIDER_ID = static_cast<rider_id_t>(-1);
 
 class Request;
