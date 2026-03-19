@@ -4,12 +4,12 @@
 #include <chrono>
 
 
-class ProgressBar {
+class bar {
 public:
     void update(unsigned percent);
 
 protected:
-    explicit ProgressBar(unsigned width = 50, char fill = '#');
+    explicit bar(unsigned width = 50, char fill = '#');
 
 private:
     unsigned m_width;
@@ -18,7 +18,7 @@ private:
 };
 
 namespace tqdm {
-    class tqdm : public ProgressBar { // NOLINT(*-pro-type-member-init)
+    class tqdm : public bar { // NOLINT(*-pro-type-member-init)
     public:
         explicit tqdm(size_t num, float flush_interval = 0.1, unsigned width = 50, char fill = '#');
 
