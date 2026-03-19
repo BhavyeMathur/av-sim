@@ -25,8 +25,6 @@ namespace sim {
 }
 
 void register_default_events() {
-    sim::events.on(AllocationEngine::on_request);
-
     sim::events.on([](const RiderLogin &event) {
         sim::riders[event.rider_id].login();
     });
@@ -38,10 +36,6 @@ void register_default_events() {
     sim::events.on([](const RiderWaypoint &event) {
         debug("RiderWaypoint(rider_id=%i)\n", event.rider_id);
         sim::riders[event.rider_id].complete_waypoint();
-    });
-
-    sim::events.on([](const RiderUpdatedETAPos &event) {
-        AllocationEngine::on_rider_updated_eta_pos(event);
     });
 
     sim::events.on([](const RequestAssigned &event) {
@@ -74,6 +68,9 @@ void create_requests() {
     RequestsDataFrame requests_df(sim::configs.get<std::string>("requests"));
 
     for (const auto &req: requests_df) {
+        if (req.created_at >= sim::configs.get<timestamp_t>("length"))
+            break;
+
         sim::requests.emplace_back(req);
         sim::events.push({req.created_at, RequestCreated{req.id}});
     }
@@ -94,6 +91,9 @@ void create_riders() {
 }
 
 void save() {
+    auto n = sim::requests.size();
+    printf("...saving statistics (count=%zu)\n", n);
+
     std::vector<bool> accepted;
     std::vector<rider_id_t> assigned_to;
     std::vector<distance_t> fm_dist;
@@ -105,8 +105,6 @@ void save() {
     std::vector<timestamp_t> pickedup_at;
     std::vector<timestamp_t> arrived_drop_at;
     std::vector<timestamp_t> completed_at;
-
-    auto n = sim::requests.size();
 
     accepted.resize(n);
     assigned_to.resize(n);
@@ -163,10 +161,9 @@ void create_world(const std::string &config_file) {
     create_requests();
     create_riders();
 
-    AllocationEngine::init();
-
     // CUSTOM HOOKS -----
 
+    AllocationEngine alloc_engine;
     FleetStats();
 
     // ------------------
@@ -190,6 +187,7 @@ void create_world(const std::string &config_file) {
         }
     }
 
+    printf("simulation complete\n");
     sim::events.trigger(SimComplete{});
     bar.complete();
     save();

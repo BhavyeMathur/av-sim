@@ -3,8 +3,7 @@
 #include "RiderBattery.h"
 #include "Rider.h"
 
-
-void RiderBattery::init() {
+RiderBattery::RiderBattery() {
     rider_id_to_state_.resize(sim::riders.size());
     sim::events.on<&RiderBattery::on_update_rider_eta_pos_>(*this);
     sim::events.on<&RiderBattery::on_rider_charge_complete_>(*this);
@@ -31,9 +30,6 @@ void RiderBattery::charge(Rider &rider) const {
 void RiderBattery::on_update_rider_eta_pos_(const RiderUpdatedETAPos &e) {
     assert(rider_id_to_state_[e.rider_id].eta_range_ >= e.distance);
     rider_id_to_state_[e.rider_id].eta_range_ -= e.distance;
-
-    debug("RiderBattery::on_update_rider_eta_pos(rider_id=%i) eta_range_=%f\n", e.rider_id,
-          rider_id_to_state_[e.rider_id].eta_range_);
 }
 
 void RiderBattery::on_rider_charge_complete_(const RiderChargeComplete &e) {

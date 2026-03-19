@@ -5,9 +5,14 @@
 
 class AllocationEngine {
 public:
-    static void init();
+    AllocationEngine();
 
-    static void on_request(const RequestCreated &event);
+    void on_request(const RequestCreated &event);
 
-    static void on_rider_updated_eta_pos(const RiderUpdatedETAPos &event);
+private:
+    HexRidersSource riders;
+    RiderBattery rider_battery;
+    RiderPAX rider_pax;
+
+    static constexpr speed_t speed_kmps = 40.0 / 3600;
 };

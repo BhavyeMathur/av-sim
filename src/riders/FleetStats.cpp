@@ -6,7 +6,7 @@
 
 
 FleetStats::FleetStats()
-        : _log_interval(sim::configs.get<duration_t>("fleet_stats_log_interval", 180)) {
+        : _log_interval(sim::configs.get<duration_t>("fleet_stats_log_interval", 900)) {
 
     _n_in_state[static_cast<uint8_t>(Rider::State::Idle)] = sim::riders.size();
 

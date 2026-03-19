@@ -4,26 +4,16 @@
 
 #include "Request.h"
 #include "riders/Rider.h"
-#include "riders/RiderBattery.h"
-#include "riders/RiderPAX.h"
 #include "routing/Distance.h"
 #include "routing/H3.h"
 
-// TODO we cannot use global variables these will clash between threads
-std::unordered_map<hex_id_t, std::unordered_set<rider_id_t>> hex_id_to_riders;
-std::vector<hex_id_t> rider_id_to_hex_id;
-RiderBattery rider_battery;
-RiderPAX rider_pax;
 
-void AllocationEngine::init() {
-    rider_id_to_hex_id.resize(sim::riders.size(), -1);
-    rider_battery.init();
-    rider_pax.init();
+AllocationEngine::AllocationEngine()
+        : riders(sim::riders.size(), 1) {
+    sim::events.on<&AllocationEngine::on_request>(*this);
 }
 
 void AllocationEngine::on_request(const RequestCreated &event) {
-    constexpr speed_t speed_kmps = 40.0 / 3600;
-
     auto request_id = event.request_id;
     auto &req = sim::requests[request_id];
 
@@ -65,7 +55,7 @@ void AllocationEngine::on_request(const RequestCreated &event) {
         best_rider = rider.id();
         best_pickup_at = pickup_at;
 
-        if (best_pickup_at - sim::clock <= 120)
+        if (best_pickup_at - sim::clock <= 240)
             break;
     }
 

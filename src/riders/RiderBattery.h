@@ -5,7 +5,7 @@
 
 class RiderBattery {
 public:
-    void init();
+    RiderBattery();
 
     [[nodiscard]] bool check_capacity(rider_id_t rider_id, distance_t distance = 0) const;
 
