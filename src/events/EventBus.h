@@ -10,6 +10,8 @@ class EventBus {
 public:
     [[nodiscard]] bool empty() const { return events_.empty(); }
 
+    [[nodiscard]] size_t size() const { return events_.size(); }
+
     Event pop() { return events_.pop(); }
 
     mutable_pq<Event>::key push(Event ev) { return events_.push(ev); }

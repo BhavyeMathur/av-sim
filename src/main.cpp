@@ -170,26 +170,27 @@ void create_world(const std::string &config_file) {
 
     sim::events.trigger(SimStart{});
 
-    auto last_t = sim::requests.back().created_at;
-    timestamp_t next_t = 0;
-    tqdm::tqdm bar(last_t);
+    auto max_size = sim::events.size();
+    unsigned int i = 0;
+    tqdm::tqdm bar(100);
 
     while (!sim::events.empty()) {
+        if (i == 0) {
+            max_size = std::max(max_size, sim::events.size());
+            bar.update(100 - (100.0f * sim::events.size()) / max_size);
+
+            i = 500;
+        }
+        i--;
+
         Event event = sim::events.pop();
         sim::clock = event.t;
         sim::events.dispatch(event);
-
-        if (sim::clock == next_t) {
-            bar.update((100 * sim::clock) / last_t);
-            next_t += 600;
-
-            debug("%i / %i (sim::clock / last_t)\n", sim::clock, last_t);
-        }
     }
+    bar.complete();
 
     printf("simulation complete\n");
     sim::events.trigger(SimComplete{});
-    bar.complete();
     save();
 }
 

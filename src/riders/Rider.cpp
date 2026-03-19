@@ -22,7 +22,6 @@ void Rider::logout() {
         throw std::runtime_error("assigned_rider already logged out");
 
     state_ = State::Dead;
-    steps_.clear();
 }
 
 void Rider::assign_request() {

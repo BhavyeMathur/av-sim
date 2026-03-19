@@ -92,6 +92,8 @@ template<class T>
 
         [[nodiscard]] bool empty() const { return q_.empty(); }
 
+        [[nodiscard]] size_t size() const { return q_.size(); }
+
     private:
         struct record {
             T value{};
