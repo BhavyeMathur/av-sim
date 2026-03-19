@@ -3,6 +3,11 @@
 #include "includes.h"
 #include "events/Event.h"
 
+#include "RiderSource.h"
+#include "riders/RiderBattery.h"
+#include "riders/RiderPAX.h"
+
+
 class AllocationEngine {
 public:
     AllocationEngine();

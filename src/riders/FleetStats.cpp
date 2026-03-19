@@ -37,6 +37,8 @@ void FleetStats::_on_rider_state_change(const RiderStateChange &e) {
 }
 
 void FleetStats::_on_sim_complete(const SimComplete &) {
+    printf("...saving fleet statistics (count=%zu)\n", _timestamps.size());
+
     std::vector<pd::AnyColumn> cols;
     cols.reserve(1 + static_cast<uint8_t>(Rider::State::SIZE));
 
