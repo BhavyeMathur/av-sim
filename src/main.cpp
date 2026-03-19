@@ -86,7 +86,9 @@ void create_riders() {
         sim::riders.emplace_back(rider);
 
         sim::events.push({r.created_at, RiderLogin{rider.id()}});
-        sim::events.push({r.created_at + r.lifetime, RiderLogout{rider.id()}});
+
+        // TODO remove if logoffs needed
+        // sim::events.push({r.created_at + r.lifetime, RiderLogout{rider.id()}});
     }
 }
 
