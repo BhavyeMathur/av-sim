@@ -86,7 +86,7 @@ private:
         duration_t approx_duration; // dwell + approx travel duration
     };
 
-    static rider_id_t next_id_;
+    static thread_local rider_id_t next_id_;
     rider_id_t id_;
 
     ringbuffer<Step> steps_;

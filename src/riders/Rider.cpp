@@ -5,12 +5,12 @@
 
 #include "routing/H3.h"
 
-rider_id_t Rider::next_id_ = 0;
+thread_local rider_id_t Rider::next_id_ = 0;
 
 void Rider::login() {
     // printf("rider %i logging in\n", id_);
     if (state_ != State::Dead)
-        throw std::runtime_error("assigned_rider already logged in");
+        throw std::runtime_error("rider already logged in");
 
     state_ = State::Idle;
     eta_at_ = last_commit_at_ = sim::clock;
@@ -19,7 +19,7 @@ void Rider::login() {
 
 void Rider::logout() {
     if (state_ == State::Dead)
-        throw std::runtime_error("assigned_rider already logged out");
+        throw std::runtime_error("rider already logged out");
 
     state_ = State::Dead;
 }
@@ -31,7 +31,7 @@ void Rider::assign_request() {
 
 void Rider::push_waypoint(Waypoint wp) {
     if (state_ == State::Dead)
-        throw std::runtime_error("cannot push waypoint to dead assigned_rider");
+        throw std::runtime_error("cannot push waypoint to dead rider");
 
     auto [distance, duration] = approx_eta(eta_pos_, wp.pos);
     duration += wp.dwell_s;

@@ -199,17 +199,36 @@ void create_world(const std::string &config_file) {
 int main(int argc, char *argv[]) {
     std::cout << std::setprecision(4) << std::fixed;
 
+    auto num_jobs = static_cast<unsigned>(argc - 1);
+    auto k = std::min(8u, std::min(num_jobs, std::thread::hardware_concurrency()));
+    if (k == 0)
+        k = 4;
+
+    printf("...launching %u threads\n", k);
+
+    std::atomic<int> next_job{1};
     std::vector<std::thread> threads;
-    for (auto i = 1; i < argc; i++)
-        threads.emplace_back([i, &argv]() { create_world(argv[i]); });
+    threads.reserve(k);
 
     auto s = std::chrono::high_resolution_clock::now();
+
+    for (unsigned t = 0; t < k; ++t)
+        threads.emplace_back([&]() {
+            while (true) {
+                int i = next_job.fetch_add(1, std::memory_order_relaxed);
+                if (i >= argc)
+                    break;
+
+                create_world(argv[i]);
+            }
+        });
+
     for (auto &t: threads)
         t.join();
+
     auto e = std::chrono::high_resolution_clock::now();
-
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(e - s);
-    std::cout << "Elapsed time: " << duration.count() << " milliseconds\n\n";
 
+    std::cout << "Elapsed time: " << duration.count() << " milliseconds\n\n";
     return 0;
 }
