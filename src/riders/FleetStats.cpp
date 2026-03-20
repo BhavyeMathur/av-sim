@@ -42,6 +42,7 @@ void FleetStats::_on_sim_complete(const SimComplete &) {
     std::vector<pd::AnyColumn> cols;
     cols.reserve(1 + static_cast<uint8_t>(Rider::State::SIZE));
 
+    // TODO change name from col_dynamic to col
     cols.push_back(pd::col_dynamic("timestamp", _timestamps));
 
     for (uint8_t i = 0; i < static_cast<uint8_t>(Rider::State::SIZE); ++i)

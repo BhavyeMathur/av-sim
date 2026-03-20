@@ -62,6 +62,8 @@ public:
 
     [[nodiscard]] hex_id_t eta_hex() const { return eta_hex_; }
 
+    [[nodiscard]] State state() { return state_; }
+
     void assign_request();
 
     void login();

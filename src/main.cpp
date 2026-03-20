@@ -5,6 +5,7 @@
 
 #include "riders/Rider.h"
 #include "riders/FleetStats.h"
+#include "riders/RiderStats.h"
 #include "allocation/AllocationEngine.h"
 #include "events/EventBus.h"
 
@@ -167,6 +168,7 @@ void create_world(const std::string &config_file) {
 
     AllocationEngine alloc_engine;
     FleetStats();
+    RiderStats();
 
     // ------------------
 
@@ -181,7 +183,7 @@ void create_world(const std::string &config_file) {
             max_size = std::max(max_size, sim::events.size());
             bar.update(100 - (100.0f * sim::events.size()) / max_size);
 
-            i = 500;
+            i = 1000;
         }
         i--;
 
