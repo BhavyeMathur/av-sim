@@ -21,9 +21,33 @@ void RiderBattery::charge(Rider &rider) const {
     // TODO charge time should be decided at charge_time with state.range_ not with state.eta_range_
     auto charge_time = static_cast<duration_t>(charge_time_ * (state.eta_range_ / capacity_));
 
-    // charge in-place
-    // TODO different charging stations & policies
-    rider.push_waypoint({rider.eta_pos(), 4 * 60, INVALID_REQ_ID, Waypoint::Kind::ChargeStart});
+    // charge in-place -----------
+    // rider.push_waypoint({rider.eta_pos(), 0, INVALID_REQ_ID, Waypoint::Kind::ChargeStart});
+    // charge in-place -----------
+
+    // Closest Charging Station -----------
+    static const std::vector<coordinate> chargers = {
+            {0.737868043395543,  -1.4614804806035193},
+            {0.7383711790474249, -1.461022762884997},
+            {0.7373253693979914, -1.4617249397298056},
+            {0.7374271558957626, -1.4607404343551826},
+            {0.7378009581918764, -1.4621699204336844}
+    };  // TODO make this an input file/geo file
+
+    duration_t best_time = std::numeric_limits<duration_t>::max();
+    size_t best_charger = -1;
+    for (size_t i = 0; i < chargers.size(); i++) {
+        auto [_, time] = approx_eta(rider.eta_pos(), chargers[i]);
+
+        if (time < best_time) {
+            best_time = time;
+            best_charger = i;
+        }
+    }
+    rider.push_waypoint({chargers[best_charger], 0, INVALID_REQ_ID, Waypoint::Kind::ChargeStart});
+
+    // Closest Charging Station -----------
+
     rider.push_waypoint({rider.eta_pos(), charge_time, INVALID_REQ_ID, Waypoint::Kind::ChargeDone});
 }
 

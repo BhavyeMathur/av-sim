@@ -2,7 +2,7 @@
 #include "h3api.h"
 
 
-static constexpr int H3_RESOLUTION = 7;
+static constexpr int H3_RESOLUTION = 8;
 
 struct NeighborHexCacheEntry {
     int computed_radius = -1;
