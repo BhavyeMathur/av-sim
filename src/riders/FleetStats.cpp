@@ -43,17 +43,16 @@ void FleetStats::_on_sim_complete(const SimComplete &) {
     cols.reserve(1 + static_cast<uint8_t>(Rider::State::SIZE));
 
     // TODO change name from col_dynamic to col
-    cols.push_back(pd::col_dynamic("timestamp", _timestamps));
+    cols.push_back(pd::col("timestamp", _timestamps));
 
     for (uint8_t i = 0; i < static_cast<uint8_t>(Rider::State::SIZE); ++i)
-        cols.push_back(pd::col_dynamic(
+        cols.push_back(pd::col(
                 Rider::state_to_string(static_cast<Rider::State>(i)),
                 _n_in_state_vs_t[i]
         ));
 
-    auto table = pd::make_table(cols).ValueOrDie();
+    auto table = pd::make_table(cols);
 
     auto filepath = sim::configs.get<std::string>("output") + "-fleet.parquet";
-    if (!pd::write_table_to_parquet(table, filepath).ok())
-        throw std::runtime_error("Failed to write the output file to " + filepath);
+    pd::write_table_to_parquet(table, filepath);
 }

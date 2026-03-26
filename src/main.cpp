@@ -149,11 +149,10 @@ void save() {
                                 pd::col("pickedup_at", pickedup_at),
                                 pd::col("arrived_drop_at", arrived_drop_at),
                                 pd::col("completed_at", completed_at),
-                                pd::col("assigned_rider", assigned_to)).ValueOrDie();
+                                pd::col("assigned_rider", assigned_to));
 
     auto filepath = sim::configs.get<std::string>("output") + ".parquet";
-    if (!pd::write_table_to_parquet(table, filepath).ok())
-        throw std::runtime_error("Failed to write the output file to " + filepath);
+    pd::write_table_to_parquet(table, filepath);
 }
 
 void create_world(const std::string &config_file) {

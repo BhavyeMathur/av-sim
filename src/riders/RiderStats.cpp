@@ -26,9 +26,8 @@ void RiderStats::on_sim_complete_(const SimComplete &) {
                                 pd::col("timestamp", timestamp_),
                                 pd::col("lat", lat_),
                                 pd::col("lon", lon_),
-                                pd::col("state", state_)).ValueOrDie();
+                                pd::col("state", state_));
 
     auto filepath = sim::configs.get<std::string>("output") + "-waypoints.parquet";
-    if (!pd::write_table_to_parquet(table, filepath).ok())
-        throw std::runtime_error("Failed to write the output file to " + filepath);
+    pd::write_table_to_parquet(table, filepath);
 }
