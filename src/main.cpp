@@ -6,7 +6,7 @@
 #include "riders/Rider.h"
 #include "riders/FleetStats.h"
 #include "riders/RiderStats.h"
-#include "allocation/AllocationEngine.h"
+#include "allocation/Strategy.h"
 #include "events/EventBus.h"
 
 #include <iomanip>
@@ -165,7 +165,8 @@ void create_world(const std::string &config_file) {
 
     // CUSTOM HOOKS -----
 
-    AllocationEngine alloc_engine;
+    GlobalBestPickupStrategy alloc_engine;
+    GreedyH3BestPickupStrategy alloc_engine2;
     FleetStats();
     RiderStats();
 
