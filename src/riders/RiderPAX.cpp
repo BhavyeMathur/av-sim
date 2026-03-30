@@ -4,7 +4,7 @@
 #include <random>
 
 
-RiderPAX::RiderPAX() {
+void RiderPAX::init() {
     auto frac_2_seater = sim::configs.get<float>("frac_2_seater", 0.0);
     auto frac_4_seater = sim::configs.get<float>("frac_4_seater", 0.0);
     auto frac_6_seater = 1 - frac_2_seater - frac_4_seater;

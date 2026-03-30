@@ -17,7 +17,8 @@ public:
 };
 
 
-class GlobalBestPickupStrategy : public BestPickupStrategy, public SequentialStrategy<GlobalBestPickupStrategy> {
+class GlobalBestPickupStrategy final : public BestPickupStrategy,
+                                       public SequentialStrategy<GlobalBestPickupStrategy> {
 public:
     using RiderInfo = BestPickupStrategy::RiderInfo;
 
@@ -28,7 +29,8 @@ private:
 };
 
 
-class GreedyH3BestPickupStrategy : public BestPickupStrategy, public SequentialStrategy<GreedyH3BestPickupStrategy> {
+class GreedyH3BestPickupStrategy final : public BestPickupStrategy,
+                                         public SequentialStrategy<GreedyH3BestPickupStrategy> {
 public:
     using RiderInfo = BestPickupStrategy::RiderInfo;
 
@@ -40,7 +42,8 @@ private:
     HexRidersSource riders;
 };
 
-class BoundedH3BestPickupStrategy : public BestPickupStrategy, public SequentialStrategy<BoundedH3BestPickupStrategy> {
+class BoundedH3BestPickupStrategy final : public BestPickupStrategy,
+                                          public SequentialStrategy<BoundedH3BestPickupStrategy> {
 public:
     using RiderInfo = BestPickupStrategy::RiderInfo;
 

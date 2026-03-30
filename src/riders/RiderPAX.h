@@ -4,7 +4,7 @@
 
 class RiderPAX {
 public:
-    RiderPAX();
+    void init();
 
     [[nodiscard]] uint8_t capacity(rider_id_t rider_id) const;
 

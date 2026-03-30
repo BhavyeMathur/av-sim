@@ -1,8 +1,6 @@
 #define DEBUG false
 
-#include "Rider.h"
-#include "Request.h"
-
+#include "extern.h"
 #include "routing/H3.h"
 
 thread_local rider_id_t Rider::next_id_ = 0;
@@ -29,21 +27,6 @@ void Rider::assign_request() {
     assert(n_assigned_ <= 3 && "rider can be assigned a maximum of three requests at a time");
 }
 
-void Rider::push_waypoint(Waypoint wp) {
-    if (state_ == State::Dead)
-        throw std::runtime_error("cannot push waypoint to dead rider");
-
-    auto [distance, duration] = approx_eta(eta_pos_, wp.pos);
-    duration += wp.dwell_s;
-    steps_.push_back({wp, duration});
-
-    eta_at_ = std::max(sim::clock, eta_at_) + duration;
-    update_eta_pos_(distance, wp.pos);
-
-    if (!next_scheduled_)
-        schedule_next_();
-}
-
 // schedule the next waypoint (if any) by pushing it to the global events queue
 void Rider::schedule_next_() {
     assert(!next_scheduled_ && "should not call schedule_next_() if event already scheduled");
@@ -64,6 +47,7 @@ void Rider::schedule_next_() {
     auto [distance, duration] = actual_eta(pos_, waypoint.pos);
     duration += waypoint.dwell_s;
 
+    sim::events.trigger(RiderScheduleWaypoint{id_, distance});
     sim::events.push({sim::clock + duration, RiderWaypoint{id_}});
     next_scheduled_ = true;
 
@@ -120,6 +104,10 @@ void Rider::complete_waypoint() {
             sim::events.trigger(RequestCompleted{waypoint.request_id});
             break;
 
+        case Waypoint::Kind::ChargeStart:
+            sim::events.trigger(RiderChargeStart{id_});
+            break;
+
         case Waypoint::Kind::ChargeDone:
             sim::events.trigger(RiderChargeComplete{id_});
             break;
@@ -143,7 +131,7 @@ void Rider::complete_waypoint() {
 void Rider::recalculate_eta_at_() {
     auto final_waypoint_at = last_commit_at_;
     for (auto &step: steps_)
-        final_waypoint_at += step.approx_duration;
+        final_waypoint_at += step.duration();
 
     eta_at_ = final_waypoint_at;
 }

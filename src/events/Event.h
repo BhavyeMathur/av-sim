@@ -18,6 +18,11 @@ struct RiderLogin : public RiderPayload {};
 struct RiderLogout : public RiderPayload {};
 struct RiderWaypoint : public RiderPayload {};
 
+struct RiderScheduleWaypoint {
+    rider_id_t rider_id;
+    distance_t distance;
+};
+
 struct RiderUpdatedETAPos {
     rider_id_t rider_id;
     distance_t distance;  // approximated distance from previous ETA pos
@@ -30,6 +35,10 @@ struct RiderStateChange {
 };
 
 struct RiderChargeComplete {
+    rider_id_t rider_id;
+};
+
+struct RiderChargeStart {
     rider_id_t rider_id;
 };
 
@@ -61,9 +70,11 @@ using EventPayload = std::variant<
 
         RiderLogin,
         RiderLogout,
+        RiderScheduleWaypoint,
         RiderWaypoint,
         RiderStateChange,
         RiderUpdatedETAPos,
+        RiderChargeStart,
         RiderChargeComplete,
 
         RequestCreated,

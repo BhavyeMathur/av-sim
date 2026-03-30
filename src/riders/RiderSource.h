@@ -4,7 +4,6 @@
 #include "riders/RiderHex.h"
 #include "riders/Rider.h"
 
-#include "util/concepts.h"
 
 class AllRidersSource {
 public:

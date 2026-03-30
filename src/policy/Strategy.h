@@ -3,12 +3,11 @@
 #include "includes.h"
 
 #include "Request.h"
-#include "riders/Rider.h"
 #include "riders/RiderBattery.h"
 #include "riders/RiderPAX.h"
+#include "riders/RiderSource.h"
 
 #include "routing/Distance.h"
-#include "RiderSource.h"
 
 
 class Strategy {
@@ -30,15 +29,12 @@ public:
     };
 
 protected:
-    RiderBattery rider_battery;
-    RiderPAX rider_pax;
-
     Strategy();
 
     // checks for global feasibility parameters such as
     //  1. passenger capacity (pax)
     //  2. battery life
-    [[nodiscard]] bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &info);
+    [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &info);
 
 private:
     virtual rider_id_t match(const Request &request) = 0;

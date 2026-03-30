@@ -30,23 +30,20 @@ static constexpr auto INVALID_HEX_ID = static_cast<hex_id_t >(-1);
 static constexpr auto INVALID_REQ_ID = static_cast<request_id_t>(-1);
 static constexpr auto INVALID_RIDER_ID = static_cast<rider_id_t>(-1);
 
-class Request;
-
 enum class _RiderState : uint8_t;
 
 class Rider;
 
-#include "util/queues.h"
-#include "events/EventBus.h"
+class Request;
+
+#include "events/Event.h"
 #include "io/SimulationConfigs.h"
 
 namespace sim {
     extern thread_local SimulationConfigs configs;
-    extern thread_local EventBus events;
 
     extern thread_local timestamp_t clock;
 
-    extern thread_local std::vector<Request> requests;
     extern thread_local std::vector<Rider> riders;
 }
 

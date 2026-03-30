@@ -3,11 +3,13 @@
 #include "io/RequestsDataframe.h"
 #include "io/RidersDataframe.h"
 
-#include "riders/Rider.h"
 #include "riders/FleetStats.h"
 #include "riders/RiderStats.h"
-#include "allocation/BestPickupStrategy.h"
-#include "events/EventBus.h"
+
+#include "extern.h"
+
+#include "policy/BestPickupStrategy.h"
+#include "policy/Charging.h"
 
 #include <iomanip>
 #include <thread>
@@ -23,6 +25,9 @@ namespace sim {
 
     thread_local std::vector<Request> requests;
     thread_local std::vector<Rider> riders;
+
+    thread_local RiderBattery rider_battery;
+    thread_local RiderPAX rider_pax;
 }
 
 void register_default_events() {
@@ -155,6 +160,30 @@ void save() {
     pd::write_table_to_parquet(table, filepath);
 }
 
+std::unique_ptr<Strategy> get_allocation_engine() {
+    auto strategy = sim::configs.get<std::string>("strategy");
+
+    if (strategy == "global")
+        return std::make_unique<GlobalBestPickupStrategy>();
+    else if (strategy == "greedy-h3")
+        return std::make_unique<GreedyH3BestPickupStrategy>();
+    else if (strategy == "bounded-h3")
+        return std::make_unique<BoundedH3BestPickupStrategy>();
+
+    throw std::invalid_argument("unknown strategy");
+}
+
+std::unique_ptr<ChargingPolicy> get_charging_policy() {
+    auto strategy = sim::configs.get<std::string>("charging");
+
+    if (strategy == "in-place")
+        return std::make_unique<ChargeInPlace>();
+    else if (strategy == "closest-hub")
+        return std::make_unique<ChargeAtHub>();
+
+    throw std::invalid_argument("unknown charging policy");
+}
+
 void create_world(const std::string &config_file) {
     sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
 
@@ -163,11 +192,14 @@ void create_world(const std::string &config_file) {
     create_requests();
     create_riders();
 
-    // CUSTOM HOOKS -----
+    auto alloc_engine = get_allocation_engine();
+    auto charging_policy = get_charging_policy();
 
-    BoundedH3BestPickupStrategy alloc_engine;
     FleetStats();
     RiderStats();
+
+    sim::rider_battery.init();
+    sim::rider_pax.init();
 
     // ------------------
 

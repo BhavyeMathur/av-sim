@@ -1,6 +1,7 @@
 #define DEBUG false
 
 #include "FleetStats.h"
+#include "extern.h"
 
 #include <pandas.h>
 

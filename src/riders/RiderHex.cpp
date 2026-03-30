@@ -1,5 +1,5 @@
 #include "RiderHex.h"
-#include "riders/Rider.h"
+#include "extern.h"
 
 
 RiderHexIndex::RiderHexIndex(size_t n_riders)

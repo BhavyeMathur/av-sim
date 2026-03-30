@@ -1,5 +1,5 @@
 #include "RiderStats.h"
-#include "Rider.h"
+#include "extern.h"
 
 #include <pandas.h>
 
