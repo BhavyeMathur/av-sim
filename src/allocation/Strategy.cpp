@@ -1,15 +1,14 @@
 #include "Strategy.h"
 
-BaseStrategy::BaseStrategy() {
-    sim::events.on<&BaseStrategy::on_request>(*this);
+Strategy::Strategy() {
+    sim::events.on<&Strategy::on_request>(*this);
 }
 
-void BaseStrategy::on_request(const RequestCreated &event) {
+void Strategy::on_request(const RequestCreated &event) {
     auto request_id = event.request_id;
     auto &req = sim::requests[request_id];
 
     auto rider_id = match(req);
-
     if (rider_id == INVALID_RIDER_ID)
         return;
 
@@ -24,7 +23,7 @@ void BaseStrategy::on_request(const RequestCreated &event) {
     rider_battery.charge(rider);
 }
 
-bool BaseStrategy::is_rider_feasible(const Rider &rider, const Request &request, BaseStrategy::RiderInfo &info) {
+bool Strategy::is_rider_feasible(const Rider &rider, const Request &request, Strategy::RiderInfo &info) {
     if (rider.n_requests_assigned() >= 2)
         return false;
 
@@ -37,20 +36,4 @@ bool BaseStrategy::is_rider_feasible(const Rider &rider, const Request &request,
         return false;
 
     return true;
-}
-
-bool BestPickupStrategy::is_better(BestPickupStrategy::RiderInfo &cand, const BestPickupStrategy::RiderInfo &best) {
-    if (cand.pax > best.pax)
-        return false;
-
-    auto fm_start_at = std::max(cand.rider->eta_at(), sim::clock);
-    auto fm_time_s = static_cast<duration_t>(cand.fm_dist_km / speed_kmps);
-    auto arrive_pickup_at = fm_start_at + fm_time_s;
-    cand.pickup_at = arrive_pickup_at + 120;
-
-    if (cand.pickup_at > best.pickup_at and cand.pax == best.pax)
-        return false;
-
-    return true;
-
 }

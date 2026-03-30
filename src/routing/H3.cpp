@@ -2,7 +2,7 @@
 #include "h3api.h"
 
 
-static constexpr int H3_RESOLUTION = 8;
+static constexpr int H3_RESOLUTION = 7;
 
 struct NeighborHexCacheEntry {
     int computed_radius = -1;
@@ -11,12 +11,18 @@ struct NeighborHexCacheEntry {
 
 thread_local std::unordered_map<hex_id_t, NeighborHexCacheEntry> neighbor_hex_cache_;
 
-uint64_t latlon_to_h3(coordinate c) {
+hex_id_t latlon_to_h3(coordinate c) {
     LatLng g{c.lat, c.lon};
 
     H3Index res;
     latLngToCell(&g, H3_RESOLUTION, &res);
     return res;
+}
+
+coordinate h3_to_latlon(hex_id_t h) {
+    LatLng g;
+    cellToLatLng(static_cast<H3Index>(h), &g);
+    return coordinate{static_cast<coordinate_t>(g.lat), static_cast<coordinate_t>(g.lng)};
 }
 
 const std::vector<hex_id_t> &hexes_in_increasing_radius(hex_id_t origin, int max_radius) {

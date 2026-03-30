@@ -53,7 +53,7 @@ void RiderBattery::charge(Rider &rider) const {
 
 void RiderBattery::on_update_rider_eta_pos_(const RiderUpdatedETAPos &e) {
     assert(rider_id_to_state_[e.rider_id].eta_range_ >= e.distance);
-    rider_id_to_state_[e.rider_id].eta_range_ -= e.distance;
+    // rider_id_to_state_[e.rider_id].eta_range_ -= e.distance;
 }
 
 void RiderBattery::on_rider_charge_complete_(const RiderChargeComplete &e) {

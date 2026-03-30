@@ -4,13 +4,15 @@
 #include "riders/RiderHex.h"
 #include "riders/Rider.h"
 
+#include "util/concepts.h"
+
 class AllRidersSource {
 public:
+    using pool_t = std::vector<rider_id_t>;
+
     AllRidersSource();
 
-    [[nodiscard]] const std::array<std::vector<rider_id_t>, 1> &candidate_pools(const Request &) const {
-        return rider_ids_;
-    }
+    [[nodiscard]] const std::array<pool_t, 1> &candidate_pools(const Request &) const { return rider_ids_; }
 
 private:
     std::array<std::vector<rider_id_t>, 1> rider_ids_;
@@ -27,52 +29,54 @@ public:
         class iterator {
         public:
             using iterator_category = std::input_iterator_tag;
-            using value_type = const RiderHexIndex::rider_set_t &;
+            using iterator_concept = std::input_iterator_tag;
+            using value_type = RiderHexIndex::rider_set_t;
             using difference_type = std::ptrdiff_t;
 
-            iterator(const RiderHexIndex &index, const std::vector<hex_id_t> &hexes, size_t pos = 0)
+            iterator() = default;
+
+            iterator(const RiderHexIndex *index, const std::vector<hex_id_t> *hexes, size_t pos = 0)
                     : index_(index),
                       hexes_(hexes),
-                      hex_pos_(std::min(pos, hexes_.size())) {}
+                      hex_pos_(hexes ? std::min(pos, hexes->size()) : 0) {}
 
             const RiderHexIndex::rider_set_t &operator*() const {
-                return index_.riders_in_hex(hexes_[hex_pos_]);
+                return index_->riders_in_hex((*hexes_)[hex_pos_]);
             }
 
             iterator &operator++() {
-                if (hex_pos_ < hexes_.size())
-                    hex_pos_++;
+                if (hex_pos_ < hexes_->size())
+                    ++hex_pos_;
                 return *this;
             }
 
-            bool operator==(const iterator &other) const {
-                return &index_ == &other.index_
-                       and hexes_ == other.hexes_
-                       and hex_pos_ == other.hex_pos_;
+            iterator operator++(int) {
+                auto tmp = *this;
+                ++(*this);
+                return tmp;
             }
 
-            bool operator!=(const iterator &other) const {
-                return !(*this == other);
-            }
+            bool operator==(const iterator &other) const = default;
 
         private:
-            const RiderHexIndex &index_;
-            const std::vector<hex_id_t> &hexes_;
-
+            const RiderHexIndex *index_ = nullptr;
+            const std::vector<hex_id_t> *hexes_ = nullptr;
             size_t hex_pos_ = 0;
         };
 
         Range(const RiderHexIndex &index, const std::vector<hex_id_t> &hexes)
                 : index_(index), hexes_(hexes) {}
 
-        [[nodiscard]] iterator begin() const { return {index_, hexes_}; }
+        [[nodiscard]] iterator begin() const { return {&index_, &hexes_}; }
 
-        [[nodiscard]] iterator end() const { return {index_, hexes_, hexes_.size()}; }
+        [[nodiscard]] iterator end() const { return {&index_, &hexes_, hexes_.size()}; }
 
     private:
         const RiderHexIndex &index_;
         const std::vector<hex_id_t> &hexes_;
     };
+
+    using pool_t = Range::iterator::value_type;
 
     [[nodiscard]] Range candidate_pools(const Request &req) const;
 
