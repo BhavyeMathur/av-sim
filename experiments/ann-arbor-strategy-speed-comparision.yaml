@@ -1,0 +1,25 @@
+description: >
+  Compare the performance of global, greedy-h3, and bounded-h3 strategies
+
+sim:
+  length_s: 604800
+  requests_file: data/requests/ann-arbor.parquet
+  riders_file:
+    template: "data/riders/ann-arbor-{fleet.fleet_size}.parquet"
+
+  h3_resolution:
+    values: [ 6, 7, 8 ]
+    default: 7
+    only_if:
+      policy.matching: [ greedy-h3, bounded-h3 ]
+
+policy:
+  charging: disable
+  matching:
+    values: [ global, greedy-h3, bounded-h3 ]
+
+fleet:
+  fleet_size:
+    values: [ 10000, 15000 ]
+  frac_2_seater: 0.0
+  frac_4_seater: 0.0
