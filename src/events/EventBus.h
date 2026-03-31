@@ -9,6 +9,12 @@
 // register and run custom callback functions for events
 class EventBus {
 public:
+    EventBus() {
+        // enable all callbacks by default
+        for (auto &b : enabled_)
+            b = true;
+    }
+
     [[nodiscard]] bool empty() const { return events_.empty(); }
 
     [[nodiscard]] size_t size() const { return events_.size(); }
@@ -120,7 +126,7 @@ private:
     };
 
     std::array<std::vector<Handler>, std::variant_size_v<EventPayload>> handlers_;
-    std::array<bool, std::variant_size_v<EventPayload>> enabled_{true};
+    std::array<bool, std::variant_size_v<EventPayload>> enabled_{};
 
     mutable_pq<Event> events_;
 

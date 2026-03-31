@@ -6,7 +6,6 @@
 thread_local rider_id_t Rider::next_id_ = 0;
 
 void Rider::login() {
-    // printf("rider %i logging in\n", id_);
     if (state_ != State::Dead)
         throw std::runtime_error("rider already logged in");
 
@@ -24,7 +23,7 @@ void Rider::logout() {
 
 void Rider::assign_request() {
     n_assigned_++;
-    assert(n_assigned_ <= 3 && "rider can be assigned a maximum of three requests at a time");
+    assert(n_assigned_ <= 2 && "rider can be assigned a maximum of two requests at a time");
 }
 
 // schedule the next waypoint (if any) by pushing it to the global events queue

@@ -28,9 +28,11 @@ public:
         Break,
     };
 
-protected:
     Strategy();
 
+    virtual ~Strategy() = default;
+
+protected:
     // checks for global feasibility parameters such as
     //  1. passenger capacity (pax)
     //  2. battery life
