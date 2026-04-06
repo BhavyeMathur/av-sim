@@ -71,10 +71,10 @@ void register_default_events() {
 }
 
 void create_requests() {
-    RequestsDataFrame requests_df(sim::configs.get<std::string>("requests"));
+    RequestsDataFrame requests_df(sim::configs.sim.requests_file);
 
     for (const auto &req: requests_df) {
-        if (req.created_at >= sim::configs.get<timestamp_t>("length"))
+        if (req.created_at >= sim::configs.sim.length_s)
             break;
 
         sim::requests.emplace_back(req);
@@ -83,7 +83,7 @@ void create_requests() {
 }
 
 void create_riders() {
-    RidersDataFrame riders_df(sim::configs.get<std::string>("riders"));
+    RidersDataFrame riders_df(sim::configs.sim.riders_file);
     sim::riders.reserve(sim::riders.size());
 
     for (const auto &r: riders_df) {
@@ -156,12 +156,12 @@ void save() {
                                 pd::col("completed_at", completed_at),
                                 pd::col("assigned_rider", assigned_to));
 
-    auto filepath = sim::configs.get<std::string>("output") + ".parquet";
+    auto filepath = sim::configs.sim.output + ".parquet";
     pd::write_table_to_parquet(table, filepath);
 }
 
 std::unique_ptr<Strategy> get_allocation_engine() {
-    auto strategy = sim::configs.get<std::string>("strategy");
+    const auto &strategy = sim::configs.policy.matching;
 
     if (strategy == "global")
         return std::make_unique<GlobalBestPickupStrategy>();
@@ -176,7 +176,7 @@ std::unique_ptr<Strategy> get_allocation_engine() {
 }
 
 std::unique_ptr<ChargingPolicy> get_charging_policy() {
-    auto strategy = sim::configs.get<std::string>("charging");
+    const auto &strategy = sim::configs.policy.charging;
 
     if (strategy == "in-place")
         return std::make_unique<ChargeInPlace>();
@@ -189,7 +189,7 @@ std::unique_ptr<ChargingPolicy> get_charging_policy() {
 }
 
 void create_world(const std::string &config_file) {
-    sim::configs = SimulationConfigs("data/sim_configs/" + config_file + ".txt");
+    sim::configs = load_config("data/sim_configs/" + config_file + ".yaml");
 
     register_default_events();
 

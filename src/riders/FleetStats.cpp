@@ -7,7 +7,7 @@
 
 
 FleetStats::FleetStats()
-        : _log_interval(sim::configs.get<duration_t>("fleet_stats_log_interval", 900)) {
+        : _log_interval(sim::configs.stats.fleet_log_interval) {
 
     _n_in_state[static_cast<uint8_t>(Rider::State::Idle)] = sim::riders.size();
 
@@ -43,7 +43,6 @@ void FleetStats::_on_sim_complete(const SimComplete &) {
     std::vector<pd::AnyColumn> cols;
     cols.reserve(1 + static_cast<uint8_t>(Rider::State::SIZE));
 
-    // TODO change name from col_dynamic to col
     cols.push_back(pd::col("timestamp", _timestamps));
 
     for (uint8_t i = 0; i < static_cast<uint8_t>(Rider::State::SIZE); ++i)
@@ -54,6 +53,6 @@ void FleetStats::_on_sim_complete(const SimComplete &) {
 
     auto table = pd::make_table(cols);
 
-    auto filepath = sim::configs.get<std::string>("output") + "-fleet.parquet";
+    auto filepath = sim::configs.sim.output + "-fleet.parquet";
     pd::write_table_to_parquet(table, filepath);
 }

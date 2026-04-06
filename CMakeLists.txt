@@ -50,9 +50,17 @@ target_include_directories(sim PRIVATE
                            ${h3_SOURCE_DIR}/src/h3lib/include
 )
 
+# YAML
+fetchcontent_declare(
+        yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG yaml-cpp-0.9.0
+)
+fetchcontent_makeavailable(yaml-cpp)
+
 # other sources
 add_subdirectory(src/util/pandas)
 add_subdirectory(src/util/tqdm)
-target_link_libraries(sim PRIVATE pandas tqdm h3)
+target_link_libraries(sim PRIVATE pandas tqdm h3 yaml-cpp)
 
 target_compile_definitions(sim PRIVATE)

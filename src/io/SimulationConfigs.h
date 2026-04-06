@@ -1,47 +1,39 @@
 #pragma once
 
 #include <string>
-#include <sstream>
-#include <unordered_map>
 
+struct SimulationConfigs {
+    struct Sim {
+        uint32_t length_s = 0;
+        int h3_resolution = 0;
 
-class SimulationConfigs {
-public:
-    SimulationConfigs() = default;
+        std::string requests_file;
+        std::string riders_file;
+        std::string output;
+    };
 
-    explicit SimulationConfigs(const std::string &config_file);
+    struct Policy {
+        std::string charging;
+        std::string matching;
+    };
 
-    template<typename T>
-        T get(const std::string &key) const {
-            auto it = m_configs.find(key);
-            if (it == m_configs.end())
-                throw std::out_of_range("SimulationConfigs: key not found: " + key);
+    struct Fleet {
+        double frac_2_seater = 0.0;
+        double frac_4_seater = 0.0;
+        double frac_6_seater = 0.0;
+        int fleet_size = 0;
+    };
 
-            const std::string &raw = it->second;
+    struct Stats {
+        uint32_t fleet_log_interval = 900;
+    };
 
-            std::istringstream iss(raw);
-            T value;
+    std::string description;
 
-            if (!(iss >> value))
-                throw std::runtime_error("SimulationConfigs: failed to parse key '" + key +
-                                         "' with value '" + raw + "' into requested type.");
-
-            std::string leftover;
-            if (iss >> leftover)
-                throw std::runtime_error("SimulationConfigs: extra trailing characters for key '" +
-                                         key + "': '" + raw + "'");
-
-            return value;
-        }
-
-    template<typename T>
-        T get(const std::string &key, T default_) const {
-            try { return get<T>(key); }
-            catch (std::out_of_range &) {}
-
-            return default_;
-        }
-
-private:
-    std::unordered_map<std::string, std::string> m_configs;
+    Sim sim;
+    Policy policy;
+    Fleet fleet;
+    Stats stats;
 };
+
+SimulationConfigs load_config(const std::string &yaml_path);

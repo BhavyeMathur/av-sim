@@ -251,6 +251,8 @@ def generate_runs_from_experiment_yaml(experiment_yaml_path: str | Path,
         (run_dir / "raw").mkdir(parents=True, exist_ok=True)
         (run_dir / "derived").mkdir(parents=True, exist_ok=True)
 
+        config["sim"]["output"] = str(run_dir / "raw/")
+
         config_path = run_dir / "config.yaml"
         with open(config_path, "w") as f:
             yaml.safe_dump(config, f, sort_keys=False)
