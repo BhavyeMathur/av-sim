@@ -257,7 +257,11 @@ def generate_runs_from_experiment_yaml(experiment_yaml_path: str | Path,
         with open(config_path, "w") as f:
             yaml.safe_dump(config, f, sort_keys=False)
 
-        runs.append({"run_name": run_name, "config_path": config_path, "config": config})
+        runs.append({"run_name": run_name, "config_path": config_path, "config": config, "run_dir": run_dir})
+
+    with open(base_dir / "manifest.txt", "w") as f:
+        for run in runs:
+            f.write(f"{run['run_dir']}/\n")
 
     return runs
 

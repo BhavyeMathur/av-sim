@@ -53,6 +53,6 @@ void FleetStats::_on_sim_complete(const SimComplete &) {
 
     auto table = pd::make_table(cols);
 
-    auto filepath = sim::configs.sim.output + "-fleet.parquet";
+    auto filepath = sim::configs.sim.output + "fleet.parquet";
     pd::write_table_to_parquet(table, filepath);
 }
