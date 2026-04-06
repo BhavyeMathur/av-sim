@@ -5,6 +5,7 @@ output/*
 
 cmake-*/
 data/*
+runs/*
 
 *.mp4
 *.so

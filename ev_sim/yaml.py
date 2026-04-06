@@ -1,10 +1,11 @@
 from __future__ import annotations
+from typing import Any
 
 import re
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
-from typing import Any
+import shutil
 
 import yaml
 
@@ -223,12 +224,40 @@ def expand_experiment(raw: dict[str, Any]) -> list[dict[str, Any]]:
     return resolved_configs
 
 
-def load_and_expand_yaml(path: str | Path) -> list[dict[str, Any]]:
+def load_experiment_yaml(path: str | Path) -> dict[str, Any]:
     with open(path, "r") as f:
         raw = yaml.safe_load(f)
     if not isinstance(raw, dict):
         raise ValueError("Experiment YAML root must be a mapping")
-    return expand_experiment(raw)
+    return raw
 
 
-__all__ = ["load_and_expand_yaml", "yaml"]
+def generate_runs_from_experiment_yaml(experiment_yaml_path: str | Path,
+                                       output_root: str | Path = "runs") -> list[dict[str, Any]]:
+    experiment_yaml_path = Path(experiment_yaml_path)
+    experiment_name = experiment_yaml_path.stem
+    raw = load_experiment_yaml(experiment_yaml_path)
+
+    base_dir = Path(output_root) / experiment_name
+    if base_dir.exists():
+        shutil.rmtree(base_dir)
+
+    runs = []
+    for i, config in enumerate(expand_experiment(raw)):
+        run_name = f"run_{i:04d}"
+        run_dir = base_dir / run_name
+
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "raw").mkdir(parents=True, exist_ok=True)
+        (run_dir / "derived").mkdir(parents=True, exist_ok=True)
+
+        config_path = run_dir / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.safe_dump(config, f, sort_keys=False)
+
+        runs.append({"run_name": run_name, "config_path": config_path, "config": config})
+
+    return runs
+
+
+__all__ = ["generate_runs_from_experiment_yaml"]
