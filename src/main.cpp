@@ -169,6 +169,8 @@ std::unique_ptr<Strategy> get_allocation_engine() {
         return std::make_unique<GreedyH3BestPickupStrategy>();
     else if (strategy == "bounded-h3")
         return std::make_unique<BoundedH3BestPickupStrategy>();
+    else if (strategy == "ringed-h3")
+        return std::make_unique<RingedH3BestPickupStrategy>();
 
     throw std::invalid_argument("unknown strategy");
 }
@@ -180,6 +182,8 @@ std::unique_ptr<ChargingPolicy> get_charging_policy() {
         return std::make_unique<ChargeInPlace>();
     else if (strategy == "closest-hub")
         return std::make_unique<ChargeAtHub>();
+    else if (strategy == "disable")
+        return nullptr;
 
     throw std::invalid_argument("unknown charging policy");
 }

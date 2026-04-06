@@ -54,3 +54,14 @@ public:
 private:
     HexRidersSource riders;
 };
+
+class RingedH3BestPickupStrategy final : public BestPickupStrategy,
+                                         public SequentialStrategy<RingedH3BestPickupStrategy> {
+public:
+    using RiderInfo = BestPickupStrategy::RiderInfo;
+
+    [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
+
+private:
+    HexRidersSource riders{8};
+};

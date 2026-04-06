@@ -19,9 +19,9 @@ private:
 
 class HexRidersSource {
 public:
-    HexRidersSource()
+    HexRidersSource(uint8_t max_radius = 3)
             : index_(sim::riders.size()),
-              max_radius_(5) {}
+              max_radius_(max_radius) {}
 
     class Range {
     public:
