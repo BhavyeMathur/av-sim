@@ -6,9 +6,7 @@ auto flatten_config(const SimulationConfigs &cfg) {
     std::vector<Database::KV> out;
 
     out.emplace_back("sim.length_s", std::to_string(cfg.sim.length_s));
-    out.emplace_back("sim.requests_file", cfg.sim.requests_file);
     out.emplace_back("sim.h3_resolution", std::to_string(cfg.sim.h3_resolution));
-    out.emplace_back("sim.riders_file", cfg.sim.riders_file);
 
     out.emplace_back("policy.charging", cfg.policy.charging);
     out.emplace_back("policy.matching", cfg.policy.matching);
@@ -45,6 +43,8 @@ void Database::init_schema() {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 experiment TEXT NOT NULL,
                 config_path TEXT NOT NULL,
+                requests_path TEXT NOT NULL,
+                riders_path TEXT NOT NULL,
                 output_dir TEXT NOT NULL,
                 started_at TEXT NOT NULL,
                 duration_ms INTEGER NOT NULL
@@ -84,18 +84,22 @@ int64_t Database::insert_run(const SimulationConfigs &configs, const std::string
             INSERT INTO runs (
                 experiment,
                 config_path,
+                requests_path,
+                riders_path,
                 output_dir,
                 started_at,
                 duration_ms
-            ) VALUES (?, ?, ?, ?, ?);
+            ) VALUES (?, ?, ?, ?, ?, ?, ?);
         )sql";
 
     sqlite3_stmt *stmt = prepare(sql);
     bind_text(stmt, 1, configs.name);
     bind_text(stmt, 2, config_path);
-    bind_text(stmt, 3, configs.sim.output);
-    bind_text(stmt, 4, started_at);
-    bind_int64(stmt, 5, duration_ms);
+    bind_text(stmt, 3, configs.sim.requests_file);
+    bind_text(stmt, 4, configs.sim.riders_file);
+    bind_text(stmt, 5, configs.sim.output);
+    bind_text(stmt, 6, started_at);
+    bind_int64(stmt, 7, duration_ms);
 
     step_done(stmt);
     finalize(stmt);

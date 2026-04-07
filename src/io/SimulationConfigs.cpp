@@ -66,7 +66,7 @@ SimulationConfigs load_config(const std::string &yaml_path) {
 
     SimulationConfigs cfg;
 
-    cfg.name = optional_scalar<std::string>(root, "name", "");
+    cfg.name = require_scalar<std::string>(root, "name");
 
     if (!root["sim"])
         throw std::runtime_error("Missing required section: sim");
@@ -81,11 +81,11 @@ SimulationConfigs load_config(const std::string &yaml_path) {
 
     cfg.sim.length_s = require_scalar<int>(sim_node, "length_s");
     cfg.sim.requests_file = require_scalar<std::string>(sim_node, "requests_file");
-    cfg.sim.h3_resolution = require_scalar<int>(sim_node, "h3_resolution");
+    cfg.sim.h3_resolution = optional_scalar<int>(sim_node, "h3_resolution", 7);
     cfg.sim.riders_file = require_scalar<std::string>(sim_node, "riders_file");
     cfg.sim.output = require_scalar<std::string>(sim_node, "output");
 
-    cfg.policy.charging = require_scalar<std::string>(policy_node, "charging");
+    cfg.policy.charging = optional_scalar<std::string>(policy_node, "charging", "disable");
     cfg.policy.matching = require_scalar<std::string>(policy_node, "matching");
 
     cfg.fleet.frac_2_seater = require_scalar<double>(fleet_node, "frac_2_seater");

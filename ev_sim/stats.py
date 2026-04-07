@@ -9,14 +9,17 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def load_results(requests: pd.DataFrame, output_file: str):
-    output = pd.read_parquet(f"{output_file}.parquet")
+def load_results(run):
+    output_dir = run["output_dir"]
+    requests = pd.read_parquet(run["requests_path"])
 
-    fleet_output = pd.read_parquet(f"{output_file}-fleet.parquet")
+    output = pd.read_parquet(f"{output_dir}/requests.parquet")
+
+    fleet_output = pd.read_parquet(f"{output_dir}/fleet.parquet")
     fleet_output.set_index("timestamp", inplace=True)
     fleet_output = fleet_output.add_prefix("n_")
 
-    waypoints_output = pd.read_parquet(f"{output_file}-waypoints.parquet")
+    waypoints_output = pd.read_parquet(f"{output_dir}/waypoints.parquet")
 
     output = requests.merge(output, left_index=True, right_index=True, validate="1:1")
 
@@ -53,14 +56,14 @@ def load_results(requests: pd.DataFrame, output_file: str):
     return all_output, output, fleet_output, waypoints_output, rider_states
 
 
-def compute_stats(all_output, output):
-    mean_fm_dist = output["fm_dist"].mean()  # km
-    mean_fm_time = output["fm_time"].mean() / 60  # mins
-    mean_fm_speed = mean_fm_dist / (mean_fm_time / 60)  # kmph
+def compute_requests_stats(all_output, output):
+    mean_fm_dist = float(output["fm_dist"].mean())  # km
+    mean_fm_time = float(output["fm_time"].mean() / 60)  # mins
+    mean_fm_speed = float(mean_fm_dist / (mean_fm_time / 60))  # kmph
 
-    mean_lm_dist = output["lm_dist"].mean()  # km
-    mean_lm_time = output["lm_time"].mean() / 60  # mins
-    mean_lm_speed = mean_lm_dist / (mean_lm_time / 60)  # kmph
+    mean_lm_dist = float(output["lm_dist"].mean())  # km
+    mean_lm_time = float(output["lm_time"].mean() / 60)  # mins
+    mean_lm_speed = float(mean_lm_dist / (mean_lm_time / 60))  # kmph
 
     return {
         "total": len(all_output),
@@ -76,11 +79,11 @@ def compute_stats(all_output, output):
         "lm_time": mean_lm_time,
         "lm_speed": mean_lm_speed,
 
-        "response_time": output["response_time"].mean() / 60,  # mins
-        "pickup_time": output["pickup_time"].mean() / 60,  # mins
-        "drop_time": output["drop_time"].mean() / 60,  # mins
+        "response_time": float(output["response_time"].mean() / 60),  # mins
+        "pickup_time": float(output["pickup_time"].mean() / 60),  # mins
+        "drop_time": float(output["drop_time"].mean() / 60),  # mins
 
-        "pax": output["pax"].mean(),
+        "pax": float(output["pax"].mean()),
     }
 
 
@@ -91,6 +94,15 @@ def compute_rider_stats(waypoints_output, rider_states):
     for col in rider_states.columns:
         output[f"{col}_pct"] = float(100 * rider_states[col].sum() / lifetime)
     return output
+
+
+def compute_stats(run):
+    all_output, output, fleet_output, waypoints_output, rider_states = load_results(run)
+
+    stats = compute_requests_stats(all_output, output)
+    stats.update(compute_rider_stats(waypoints_output, rider_states))
+
+    return stats
 
 
 def print_stats(output, all_output, stats, rider_stats=None):
@@ -114,3 +126,6 @@ def print_stats(output, all_output, stats, rider_stats=None):
         print(f"    LM: {rider_stats['lm_pct']:.2f}%")
         if "charge_pct" in rider_stats:
             print(f"Charge: {rider_stats['charge_pct']:.2f}%")
+
+
+__all__ = ["compute_stats"]
