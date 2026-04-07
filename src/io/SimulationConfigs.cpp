@@ -66,7 +66,7 @@ SimulationConfigs load_config(const std::string &yaml_path) {
 
     SimulationConfigs cfg;
 
-    cfg.description = optional_scalar<std::string>(root, "description", "");
+    cfg.name = optional_scalar<std::string>(root, "name", "");
 
     if (!root["sim"])
         throw std::runtime_error("Missing required section: sim");

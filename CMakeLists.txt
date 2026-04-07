@@ -35,6 +35,7 @@ add_executable(sim ${SIM_SOURCES})
 set_target_properties(sim PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
 target_include_directories(sim PUBLIC src)
 target_include_directories(sim PUBLIC src/util)
+target_include_directories(sim PUBLIC src/dsa)
 
 # Uber H3
 fetchcontent_declare(
@@ -58,9 +59,12 @@ fetchcontent_declare(
 )
 fetchcontent_makeavailable(yaml-cpp)
 
+# SQLite
+find_package(SQLite3 REQUIRED)
+
 # other sources
 add_subdirectory(src/util/pandas)
 add_subdirectory(src/util/tqdm)
-target_link_libraries(sim PRIVATE pandas tqdm h3 yaml-cpp)
+target_link_libraries(sim PRIVATE pandas tqdm h3 yaml-cpp SQLite::SQLite3)
 
 target_compile_definitions(sim PRIVATE)

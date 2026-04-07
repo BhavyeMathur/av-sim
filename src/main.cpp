@@ -1,12 +1,39 @@
 #define DEBUG false
 
 #include "World.h"
+#include "io/Database.h"
+#include "io/SimulationConfigs.h"
+
+#include "util/misc.h"
 
 #include <iomanip>
 #include <iostream>
 #include <thread>
 #include <semaphore>
 #include <fstream>
+
+
+static std::string db_path = "runs/runs.sqlite3";
+
+
+namespace sim {
+    thread_local SimulationConfigs configs;
+}
+
+void run(const std::string &config) {
+    sim::configs = load_config(config);
+
+    const std::string started_at = utc_now_iso8601();
+    auto s = std::chrono::high_resolution_clock::now();
+
+    create_world();
+
+    auto e = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(e - s);
+
+    Database db(db_path);
+    db.create_run(sim::configs, config, started_at, duration.count());
+}
 
 std::vector<std::string> read_manifest(const std::string &manifest_path) {
     std::ifstream in(manifest_path);
@@ -37,6 +64,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // initialize database and schema
+    {
+        Database db(db_path);
+        db.init_schema();
+    }
+
     std::vector<std::thread> threads;
     threads.reserve(experiments.size());
 
@@ -51,17 +84,15 @@ int main(int argc, char *argv[]) {
 
     for (const auto &path: experiments) {
         // we allow a maximum of max_concurrent threads
-        // and use a semaphore to guarantee this
-        // released inside the thread once it is complete
+        // and use a semaphore  to guarantee this
         sem.acquire();
 
         threads.emplace_back([&sem, path]() {
             try {
-                create_world(path);
+                run(path);
             } catch (...) {
                 std::cerr << "Run " << path << " failed" << std::endl;
                 sem.release();
-                throw;
             }
             sem.release();
         });

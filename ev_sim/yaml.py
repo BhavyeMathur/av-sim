@@ -250,6 +250,7 @@ def generate_runs_from_yaml(experiment_yaml_path: str | Path, output_root: str |
         (run_dir / "raw").mkdir(parents=True, exist_ok=True)
         (run_dir / "derived").mkdir(parents=True, exist_ok=True)
 
+        config["sim"]["name"] = experiment_name
         config["sim"]["output"] = str(run_dir / "raw/")
 
         config_path = run_dir / "config.yaml"

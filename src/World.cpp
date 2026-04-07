@@ -13,11 +13,9 @@
 
 #include <pandas.h>
 #include <tqdm.h>
-#include <fstream>
 
 
 namespace sim {
-    thread_local SimulationConfigs configs;
     thread_local EventBus events;
 
     thread_local timestamp_t clock = 0;
@@ -187,9 +185,7 @@ void save() {
     pd::write_table_to_parquet(table, filepath);
 }
 
-void create_world(const std::string &config_file) {
-    sim::configs = load_config(config_file);
-
+void create_world() {
     register_default_events();
 
     create_requests();
@@ -205,7 +201,6 @@ void create_world(const std::string &config_file) {
     sim::rider_pax.init();
 
     // ------------------
-    auto s = std::chrono::high_resolution_clock::now();
     sim::events.trigger(SimStart{});
 
     auto max_size = sim::events.size();
@@ -227,12 +222,7 @@ void create_world(const std::string &config_file) {
     }
     bar.complete();
 
-    auto e = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(e - s);
     sim::events.trigger(SimComplete{});
 
     save();
-
-    std::ofstream file(sim::configs.sim.output + "/log.txt");
-    file << "simulation complete in " << duration << endl;
 }

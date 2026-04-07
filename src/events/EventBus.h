@@ -2,7 +2,7 @@
 
 #include "Event.h"
 #include "util/function.h"
-#include "util/queues.h"
+#include <queues.h>
 
 
 // EventBus wraps a queue of Events and allows the user to

@@ -28,7 +28,7 @@ struct SimulationConfigs {
         uint32_t fleet_log_interval = 900;
     };
 
-    std::string description;
+    std::string name;
 
     Sim sim;
     Policy policy;
