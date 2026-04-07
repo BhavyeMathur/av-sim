@@ -13,6 +13,7 @@
 
 #include <pandas.h>
 #include <tqdm.h>
+#include <fstream>
 
 
 namespace sim {
@@ -182,7 +183,7 @@ void save() {
                                 pd::col("completed_at", completed_at),
                                 pd::col("assigned_rider", assigned_to));
 
-    auto filepath = sim::configs.sim.output + "requests.parquet";
+    auto filepath = sim::configs.sim.output + "/requests.parquet";
     pd::write_table_to_parquet(table, filepath);
 }
 
@@ -204,7 +205,7 @@ void create_world(const std::string &config_file) {
     sim::rider_pax.init();
 
     // ------------------
-
+    auto s = std::chrono::high_resolution_clock::now();
     sim::events.trigger(SimStart{});
 
     auto max_size = sim::events.size();
@@ -226,7 +227,12 @@ void create_world(const std::string &config_file) {
     }
     bar.complete();
 
-    printf("simulation complete\n");
+    auto e = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(e - s);
     sim::events.trigger(SimComplete{});
+
     save();
+
+    std::ofstream file(sim::configs.sim.output + "/log.txt");
+    file << "simulation complete in " << duration << endl;
 }

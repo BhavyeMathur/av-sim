@@ -22,16 +22,19 @@ def stream_subprocess(command, cwd=None):
     return process.returncode
 
 
-def build_and_run(target: str, *args, build_dir: str = "cmake-build-release", output_folder: str = "."):
+def build_and_run(target: str, *args, build_dir: str = "cmake-build-release", output_folder: str = ".",
+                  cmake: bool = False):
     """
     Builds a CMake target `target` and runs it with arguments `args`.
     """
 
     os.makedirs(build_dir, exist_ok=True)
-    run_command("cmake ..", cwd=build_dir)
+    if cmake:
+        run_command("cmake ..", cwd=build_dir)
 
     print(">>> Building...")
-    ret = stream_subprocess(["cmake", "--build", ".", "--target", target], cwd=build_dir)
+    ret = stream_subprocess(["cmake", "--build", build_dir, "--target", target, "-j", "8"])
+
     if ret != 0:
         print("Build failed.")
         return

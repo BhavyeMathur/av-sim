@@ -232,8 +232,7 @@ def load_experiment_yaml(path: str | Path) -> dict[str, Any]:
     return raw
 
 
-def generate_runs_from_experiment_yaml(experiment_yaml_path: str | Path,
-                                       output_root: str | Path = "runs") -> list[dict[str, Any]]:
+def generate_runs_from_yaml(experiment_yaml_path: str | Path, output_root: str | Path = "runs") -> list[dict[str, Any]]:
     experiment_yaml_path = Path(experiment_yaml_path)
     experiment_name = experiment_yaml_path.stem
     raw = load_experiment_yaml(experiment_yaml_path)
@@ -266,4 +265,4 @@ def generate_runs_from_experiment_yaml(experiment_yaml_path: str | Path,
     return runs
 
 
-__all__ = ["generate_runs_from_experiment_yaml"]
+__all__ = ["generate_runs_from_yaml"]
