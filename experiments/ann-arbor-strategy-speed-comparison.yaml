@@ -1,5 +1,5 @@
 sim:
-  length_s: 86400
+  length_s: 604800
   requests_file: data/requests/ann-arbor.parquet
   riders_file:
     template: "data/riders/ann-arbor-{fleet.fleet_size}.parquet"

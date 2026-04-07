@@ -162,12 +162,9 @@ def render_template(template: str, context: dict[str, Any]) -> str:
 def expand_experiment(raw: dict[str, Any]) -> list[dict[str, Any]]:
     base, sweeps, templates = collect_spec(raw)
 
-    # First pass: determine which sweeps are unconditional vs conditional.
-    # We only immediately classify unconditional ones.
     unconditional_sweeps = [s for s in sweeps if not s["only_if"]]
     conditional_sweeps = [s for s in sweeps if s["only_if"]]
 
-    # Expand over unconditional sweeps first
     if unconditional_sweeps:
         unconditional_paths = [s["path"] for s in unconditional_sweeps]
         unconditional_values = [s["values"] for s in unconditional_sweeps]
@@ -183,7 +180,6 @@ def expand_experiment(raw: dict[str, Any]) -> list[dict[str, Any]]:
 
     resolved_configs: list[dict[str, Any]] = []
 
-    # For each partial config, decide which conditional sweeps are active
     for partial in partial_configs:
         currently_active = []
         currently_inactive = []
@@ -194,11 +190,9 @@ def expand_experiment(raw: dict[str, Any]) -> list[dict[str, Any]]:
             else:
                 currently_inactive.append(sweep)
 
-        cfg = deepcopy(partial)
-
-        def sweep_inactive():
+        def finalize(cfg: dict[str, Any]) -> None:
             for sweep in currently_inactive:
-                if "default" in sweep and sweep["default"] is not None:
+                if sweep["default"] is not None:
                     set_by_path(cfg, sweep["path"], deepcopy(sweep["default"]))
                 else:
                     delete_by_path(cfg, sweep["path"])
@@ -214,12 +208,12 @@ def expand_experiment(raw: dict[str, Any]) -> list[dict[str, Any]]:
             active_values = [s["values"] for s in currently_active]
 
             for combo in product(*active_values):
+                cfg = deepcopy(partial)
                 for path, value in zip(active_paths, combo):
                     set_by_path(cfg, path, value)
-                sweep_inactive()
-
+                finalize(cfg)
         else:
-            sweep_inactive()
+            finalize(deepcopy(partial))
 
     return resolved_configs
 
