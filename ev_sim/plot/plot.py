@@ -271,3 +271,6 @@ class Plot:
     def show(self) -> None:
         fig, _ = self.render()
         plt.show()
+
+
+__all__ = ["Plot", "style_plot"]

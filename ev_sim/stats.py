@@ -1,8 +1,6 @@
 import pandas as pd
-import numpy as np
 
-from ev_sim.plot import *
-import matplotlib.pyplot as plt
+from .constants import RIDER_STATES
 
 import warnings
 
@@ -32,18 +30,6 @@ def load_results(run):
     output["lm_time"] = output["arrived_drop_at"] - output["pickedup_at"]
     output["drop_time"] = output["completed_at"] - output["arrived_drop_at"]
 
-    # rider states dataframe computed from waypoints output
-    state_map = {
-        0: "dead",
-        1: "idle",
-        2: "fm",
-        3: "pickup",
-        4: "lm",
-        5: "drop",
-        6: "service",
-        7: "charge"
-    }
-
     rider_states = waypoints_output.copy()
 
     rider_states["dt"] = rider_states.groupby("rider")["timestamp"].shift(-1) - rider_states["timestamp"]
@@ -51,7 +37,7 @@ def load_results(run):
     rider_states = (rider_states.groupby(["rider", "state"])["dt"]
                     .sum()
                     .unstack(fill_value=0, )
-                    .rename(columns=state_map))
+                    .rename(columns=RIDER_STATES))
 
     return all_output, output, fleet_output, waypoints_output, rider_states
 

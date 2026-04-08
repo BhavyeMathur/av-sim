@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 import datashader as ds
 import pandas as pd
 
+from .cmaps import CMAP_TYPE, default_cmap
+
 
 @dataclass
 class LineLayer:
@@ -12,19 +14,34 @@ class LineLayer:
     y0: str
     x1: str
     y1: str
-    cmap: Sequence[str] = (
-        "#0b0b0b",
-        "#2b0d0a",
-        "#5c1a0f",
-        "#a33a17",
-        "#ff7b2c",
-        "#ffd08a",
-        "#fff2de",
-    )
+    cmap: CMAP_TYPE = default_cmap
     alpha: float = 1.0
     how: str = "eq_hist"
     antialias: bool = False
     agg: object = field(default_factory=ds.count)
 
 
-__all__ = ["LineLayer"]
+@dataclass
+class HexbinLayer:
+    df: object
+    x: str
+    y: str
+    cmap: CMAP_TYPE = default_cmap
+    alpha: float = 1.0
+    how: str = "eq_hist"
+    agg: object = ds.count()
+
+
+@dataclass
+class GridLayer:
+    df: object
+    x: str
+    y: str
+    bins: tuple[int, int] | None = None
+    cmap: CMAP_TYPE = default_cmap
+    alpha: float = 1.0
+    how: str = "eq_hist"
+    agg: object = ds.count()
+
+
+__all__ = ["LineLayer", "HexbinLayer", "GridLayer"]

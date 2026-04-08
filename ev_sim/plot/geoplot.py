@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Sequence, Iterable
+from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -73,6 +73,26 @@ class GeoPlot:
             LineLayer(df, x0, y0, x1, y1, cmap=cmap, alpha=alpha, how=how, antialias=antialias, agg=agg))
         return self
 
+    def add_grid(self, df, x: str, y: str, *,
+                 bins: tuple[int, int] | None = None,
+                 cmap: CMAP_TYPE = default_cmap,
+                 alpha: float = 1.0,
+                 how: str = "eq_hist",
+                 agg=ds.count()) -> GeoPlot:
+        self._layers.append(
+            GridLayer(df, x, y, bins=bins, cmap=cmap, alpha=alpha, how=how, agg=agg)
+        )
+        return self
+
+    def _project_point_df(self, layer) -> pd.DataFrame:
+        x, y = self._transformer.transform(
+            layer.df[layer.x].to_numpy(),
+            layer.df[layer.y].to_numpy(),
+        )
+        pts = pd.DataFrame({"x": x, "y": y})
+        pts = pts.replace([np.inf, -np.inf], np.nan).dropna()
+        return pts
+
     def _project_line_df(self, layer: LineLayer) -> pd.DataFrame:
         x0, y0 = self._transformer.transform(
             layer.df[layer.x0].to_numpy(),
@@ -96,13 +116,21 @@ class GeoPlot:
 
         xs = []
         ys = []
+
         for df in projected_layers:
             if len(df) == 0:
                 continue
-            xs.append(df["x0"].to_numpy())
-            xs.append(df["x1"].to_numpy())
-            ys.append(df["y0"].to_numpy())
-            ys.append(df["y1"].to_numpy())
+
+            if {"x0", "x1", "y0", "y1"}.issubset(df.columns):
+                xs.append(df["x0"].to_numpy())
+                xs.append(df["x1"].to_numpy())
+                ys.append(df["y0"].to_numpy())
+                ys.append(df["y1"].to_numpy())
+            elif {"x", "y"}.issubset(df.columns):
+                xs.append(df["x"].to_numpy())
+                ys.append(df["y"].to_numpy())
+            else:
+                raise ValueError(f"Unsupported projected layer columns: {list(df.columns)}")
 
         if not xs or not ys:
             raise ValueError("No valid geometries to plot.")
@@ -124,26 +152,60 @@ class GeoPlot:
 
     def render(self) -> Image.Image:
         if not self._layers:
-            raise ValueError("No layers added. Use add_lines(...) first.")
+            raise ValueError("No layers added. Use add_lines(...), add_hexbin(...), or add_grid(...).")
 
-        projected = [self._project_line_df(layer) for layer in self._layers]
+        projected = []
+        for layer in self._layers:
+            if isinstance(layer, LineLayer):
+                projected.append(self._project_line_df(layer))
+            elif isinstance(layer, GridLayer):
+                projected.append(self._project_point_df(layer))
+            else:
+                raise TypeError(f"Unsupported layer type: {type(layer).__name__}")
+
         x_range, y_range = self._compute_extent(projected)
 
         aspect = (x_range[1] - x_range[0]) / (y_range[1] - y_range[0])
         height = max(1, round(self.width / aspect))
 
-        canvas = ds.Canvas(plot_width=self.width, plot_height=height, x_range=x_range, y_range=y_range)
+        canvas = ds.Canvas(
+            plot_width=self.width,
+            plot_height=height,
+            x_range=x_range,
+            y_range=y_range,
+        )
 
         base_img, labels_img = render_basemap(self.basemap_style, x_range, y_range, (self.width, height))
         final = base_img.copy()
 
-        for layer, trips in zip(self._layers, projected):
-            if len(trips) == 0:
+        for layer, data in zip(self._layers, projected):
+            if len(data) == 0:
                 continue
 
-            agg = canvas.line(trips, x=["x0", "x1"], y=["y0", "y1"], axis=1, agg=layer.agg, antialias=layer.antialias)
+            if isinstance(layer, LineLayer):
+                agg = canvas.line(
+                    data,
+                    x=["x0", "x1"],
+                    y=["y0", "y1"],
+                    axis=1,
+                    agg=layer.agg,
+                    antialias=layer.antialias,
+                )
+            elif isinstance(layer, GridLayer):
+                if layer.bins is None:
+                    agg = canvas.points(data, x="x", y="y", agg=layer.agg)
+                else:
+                    nx, ny = layer.bins
+                    grid_canvas = ds.Canvas(plot_width=nx, plot_height=ny, x_range=x_range, y_range=y_range)
+                    agg = grid_canvas.points(data, x="x", y="y", agg=layer.agg)
+            else:
+                raise TypeError(f"Unsupported layer type: {type(layer).__name__}")
 
             layer_img = tf.shade(agg, cmap=layer.cmap, how=layer.how).to_pil().convert("RGBA")
+            
+            if isinstance(layer, GridLayer) and layer.bins is not None:
+                layer_img = layer_img.resize((self.width, height), resample=Image.NEAREST)
+
             layer_img = self._apply_alpha(layer_img, layer.alpha)
             final = self.blend(final, layer_img)
 
@@ -154,3 +216,6 @@ class GeoPlot:
 
     def save(self, path: str) -> None:
         self.render().save(path)
+
+
+__all__ = ["GeoPlot"]
