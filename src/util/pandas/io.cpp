@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <arrow/io/api.h>
+#include <arrow/csv/api.h>
 #include <arrow/pretty_print.h>
 #include <parquet/arrow/reader.h>
 
@@ -11,7 +12,7 @@
 using namespace std;
 
 namespace pd {
-    shared_ptr<arrow::Table> read_parquet(const string &path) {
+    std::shared_ptr<DataFrame> read_parquet(const string &path) {
         arrow::MemoryPool *pool = arrow::default_memory_pool();
 
         auto input_result = arrow::io::ReadableFile::Open(path);
@@ -32,5 +33,35 @@ namespace pd {
             throw runtime_error("Failed to read table: " + status.ToString());
 
         return table;
+    }
+
+    std::shared_ptr<DataFrame> read_csv(const string &path) {
+        auto input_result = arrow::io::ReadableFile::Open(path);
+        if (!input_result.ok())
+            throw runtime_error("Failed to open file: " + path + " — " + input_result.status().ToString());
+
+        shared_ptr<arrow::io::InputStream> input = input_result.ValueOrDie();
+
+        auto read_options = arrow::csv::ReadOptions::Defaults();
+        auto parse_options = arrow::csv::ParseOptions::Defaults();
+        auto convert_options = arrow::csv::ConvertOptions::Defaults();
+
+        auto reader_result = arrow::csv::TableReader::Make(
+                arrow::io::default_io_context(),
+                input,
+                read_options,
+                parse_options,
+                convert_options
+        );
+        if (!reader_result.ok())
+            throw runtime_error("Failed to create CSV reader: " + reader_result.status().ToString());
+
+        const shared_ptr<arrow::csv::TableReader> &reader = reader_result.ValueOrDie();
+
+        auto table_result = reader->Read();
+        if (!table_result.ok())
+            throw runtime_error("Failed to read CSV table: " + table_result.status().ToString());
+
+        return table_result.ValueOrDie();
     }
 }

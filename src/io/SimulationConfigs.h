@@ -13,8 +13,10 @@ struct SimulationConfigs {
     };
 
     struct Policy {
-        std::string charging;
         std::string matching;
+
+        std::string charging;
+        std::string charging_hubs;
     };
 
     struct Fleet {

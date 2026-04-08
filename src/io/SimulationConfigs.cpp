@@ -85,8 +85,9 @@ SimulationConfigs load_config(const std::string &yaml_path) {
     cfg.sim.riders_file = require_scalar<std::string>(sim_node, "riders_file");
     cfg.sim.output = require_scalar<std::string>(sim_node, "output");
 
-    cfg.policy.charging = optional_scalar<std::string>(policy_node, "charging", "disable");
     cfg.policy.matching = require_scalar<std::string>(policy_node, "matching");
+    cfg.policy.charging = optional_scalar<std::string>(policy_node, "charging", "disable");
+    cfg.policy.charging_hubs = optional_scalar<std::string>(policy_node, "charging_hubs", "");
 
     cfg.fleet.frac_2_seater = require_scalar<double>(fleet_node, "frac_2_seater");
     cfg.fleet.frac_4_seater = require_scalar<double>(fleet_node, "frac_4_seater");
