@@ -7,78 +7,155 @@ import shapely
 from shapely.geometry import shape, Polygon, Point
 from scipy.spatial import cKDTree
 
+MODE_TYPE = Literal["all", "outbound", "inbound", "internal", "external"]
 
-def clip_trips_to_region(df: pd.DataFrame, polygon_geojson: dict,
-                         pick_lat="pick_lat", pick_lon="pick_lon",
-                         drop_lat="drop_lat", drop_lon="drop_lon",
-                         keep_radians: bool = True) -> pd.DataFrame:
-    poly = shape(polygon_geojson)  # degrees
+
+def clip_trips_to_region(df: pd.DataFrame,
+                         polygon_geojson: dict,
+                         pick_lat: str = "pick_lat",
+                         pick_lon: str = "pick_lon",
+                         drop_lat: str = "drop_lat",
+                         drop_lon: str = "drop_lon",
+                         keep_radians: bool = True,
+                         mode: MODE_TYPE = "all") -> pd.DataFrame:
+    """
+    Clip trips to a polygon and optionally snap crossing endpoints to the boundary.
+
+    mode:
+      - "all": keep crossing + internal trips; drop both-outside trips.
+               Snap only crossing rows.
+      - "outbound": keep only pick inside & drop outside.
+                    Snap drop to polygon boundary.
+      - "inbound": keep only pick outside & drop inside.
+                   Snap pick to polygon boundary.
+      - "internal": keep only pick inside & drop inside.
+                    No snapping.
+    """
+    poly = shape(polygon_geojson)
     boundary = poly.boundary
 
-    p_lat = np.degrees(df[pick_lat].values)
-    p_lon = np.degrees(df[pick_lon].values)
-    d_lat = np.degrees(df[drop_lat].values)
-    d_lon = np.degrees(df[drop_lon].values)
+    # read coordinates in degrees
+    if keep_radians:
+        p_lat = np.degrees(df[pick_lat].to_numpy())
+        p_lon = np.degrees(df[pick_lon].to_numpy())
+        d_lat = np.degrees(df[drop_lat].to_numpy())
+        d_lon = np.degrees(df[drop_lon].to_numpy())
+    else:
+        p_lat = df[pick_lat].to_numpy()
+        p_lon = df[pick_lon].to_numpy()
+        d_lat = df[drop_lat].to_numpy()
+        d_lon = df[drop_lon].to_numpy()
 
     p_in = np.zeros(len(df), dtype=bool)
     d_in = np.zeros(len(df), dtype=bool)
 
     minx, miny, maxx, maxy = poly.bounds
 
-    # quick check if points lie inside bounding rectangle
+    # bbox prefilter
     p_bbox = (p_lon >= minx) & (p_lon <= maxx) & (p_lat >= miny) & (p_lat <= maxy)
     d_bbox = (d_lon >= minx) & (d_lon <= maxx) & (d_lat >= miny) & (d_lat <= maxy)
 
-    # for the points that lie inside the rectangle, check if they lie inside the polygon
-    p_pts = shapely.points(p_lon[p_bbox], p_lat[p_bbox])
-    p_in[p_bbox] = shapely.covers(poly, p_pts)
+    if p_bbox.any():
+        p_pts = shapely.points(p_lon[p_bbox], p_lat[p_bbox])
+        p_in[p_bbox] = shapely.covers(poly, p_pts)
 
-    d_pts = shapely.points(d_lon[d_bbox], d_lat[d_bbox])
-    d_in[d_bbox] = shapely.covers(poly, d_pts)
+    if d_bbox.any():
+        d_pts = shapely.points(d_lon[d_bbox], d_lat[d_bbox])
+        d_in[d_bbox] = shapely.covers(poly, d_pts)
 
-    # filter points that lie completely outside the polygon
-    keep_mask = p_in | d_in
+    both_in = p_in & d_in
+    both_out = ~(p_in | d_in)
+    outbound = p_in & (~d_in)
+    inbound = (~p_in) & d_in
 
-    df = df[keep_mask]
+    # mode filter
+    if mode == "all":
+        keep_mask = ~both_out
+    elif mode == "outbound":
+        keep_mask = outbound
+    elif mode == "inbound":
+        keep_mask = inbound
+    elif mode == "internal":
+        keep_mask = both_in
+    elif mode == "external":
+        keep_mask = inbound | outbound
+    else:
+        raise ValueError('mode must be one of {"all", "outbound", "inbound", "internal", "external"}')
+
+    df = df.loc[keep_mask].copy()
+    if df.empty:
+        return df
+
     p_lat = p_lat[keep_mask]
     p_lon = p_lon[keep_mask]
     d_lat = d_lat[keep_mask]
     d_lon = d_lon[keep_mask]
-    p_in = p_in[keep_mask]
-    d_in = d_in[keep_mask]
+    outbound = outbound[keep_mask]
+    inbound = inbound[keep_mask]
 
-    # snap outside endpoints to boundary of polygon
-    cross = p_in ^ d_in
-    idx = np.where(cross)[0]
-    p_in = p_in[idx]
-    d_in = d_in[idx]
+    crossing = outbound | inbound
 
-    coords = np.empty((len(idx), 2, 2), dtype=np.float32)  # shape: (m, 2, 2) where last dim is (x=lon, y=lat)
-    coords[:, 0, 0] = p_lon[idx]
-    coords[:, 0, 1] = p_lat[idx]
-    coords[:, 1, 0] = d_lon[idx]
-    coords[:, 1, 1] = d_lat[idx]
+    # snap only crossing rows
+    if crossing.any():
+        idx = np.where(crossing)[0]
 
-    lines = shapely.linestrings(coords)  # create lines from pickup/drop
+        coords = np.empty((len(idx), 2, 2), dtype=np.float64)
+        coords[:, 0, 0] = p_lon[idx]
+        coords[:, 0, 1] = p_lat[idx]
+        coords[:, 1, 0] = d_lon[idx]
+        coords[:, 1, 1] = d_lat[idx]
 
-    inter = shapely.intersection(lines, boundary)  # get intersection between lines and polygon
-    hit = shapely.get_geometry(inter, 0)
-    hit_x = shapely.get_x(hit)
-    hit_y = shapely.get_y(hit)
+        lines = shapely.linestrings(coords)
+        inter = shapely.intersection(lines, boundary)
 
-    # if pick is inside -> move drop to boundary
-    move_drop = p_in & (~d_in)
-    j = idx[move_drop]
-    d_lon[j] = hit_x[move_drop]
-    d_lat[j] = hit_y[move_drop]
+        hit = shapely.get_geometry(inter, 0)
+        hit_x = shapely.get_x(hit)
+        hit_y = shapely.get_y(hit)
 
-    # if drop is inside -> move pick to boundary
-    move_pick = d_in & (~p_in)
-    j = idx[move_pick]
-    p_lon[j] = hit_x[move_pick]
-    p_lat[j] = hit_y[move_pick]
+        ok = np.isfinite(hit_x) & np.isfinite(hit_y)
+        if not ok.all():
+            # drop degenerate crossing rows with no usable boundary hit
+            bad_idx = idx[~ok]
+            keep2 = np.ones(len(df), dtype=bool)
+            keep2[bad_idx] = False
 
-    # write back (either radians or degrees)
+            df = df.loc[keep2].copy()
+            p_lat = p_lat[keep2]
+            p_lon = p_lon[keep2]
+            d_lat = d_lat[keep2]
+            d_lon = d_lon[keep2]
+            outbound = outbound[keep2]
+            inbound = inbound[keep2]
+            crossing = outbound | inbound
+
+            if crossing.any():
+                idx = np.where(crossing)[0]
+                coords = np.empty((len(idx), 2, 2), dtype=np.float64)
+                coords[:, 0, 0] = p_lon[idx]
+                coords[:, 0, 1] = p_lat[idx]
+                coords[:, 1, 0] = d_lon[idx]
+                coords[:, 1, 1] = d_lat[idx]
+
+                lines = shapely.linestrings(coords)
+                inter = shapely.intersection(lines, boundary)
+                hit = shapely.get_geometry(inter, 0)
+                hit_x = shapely.get_x(hit)
+                hit_y = shapely.get_y(hit)
+
+        if crossing.any():
+            # outbound -> move drop to boundary
+            out_mask = outbound[idx]
+            j = idx[out_mask]
+            d_lon[j] = hit_x[out_mask]
+            d_lat[j] = hit_y[out_mask]
+
+            # inbound -> move pick to boundary
+            in_mask = inbound[idx]
+            j = idx[in_mask]
+            p_lon[j] = hit_x[in_mask]
+            p_lat[j] = hit_y[in_mask]
+
+    # write back
     if keep_radians:
         df.loc[:, pick_lat] = np.radians(p_lat)
         df.loc[:, pick_lon] = np.radians(p_lon)
@@ -100,13 +177,14 @@ def snap_trips_to_boundary_points(df: pd.DataFrame,
                                   drop_lat="drop_lat", drop_lon="drop_lon",
                                   keep_radians: bool = True,
                                   chunksize: int = 2_000_000,
-                                  mode: Literal["all", "outbound", "inbound", "internal"] = "all") -> pd.DataFrame:
+                                  mode: MODE_TYPE = "all") -> pd.DataFrame:
     """
     mode:
       - "all": keep (crossing OR internal). drop both-out. snap only crossing rows.
       - "outbound": keep pick inside & drop outside. snap drop to nearest allowed boundary point.
       - "inbound": keep pick outside & drop inside. snap pick to nearest allowed boundary point.
       - "internal": keep pick inside & drop inside. no snapping.
+      - "external": keep inbound and outbound trips
     """
     poly = shape(polygon_geojson)
     boundary = poly.boundary
@@ -163,8 +241,10 @@ def snap_trips_to_boundary_points(df: pd.DataFrame,
             keep = inbound
         elif mode == "internal":
             keep = both_in
+        elif mode == "external":
+            keep = outbound | inbound
         else:
-            raise ValueError('mode must be one of {"all","outbound","inbound","internal"}')
+            raise ValueError('mode must be one of {"all", "outbound", "inbound", "internal", "external"}')
 
         if not keep.any():
             continue
