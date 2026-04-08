@@ -17,10 +17,11 @@ class ChargeInPlace final : public ChargingPolicy {
 };
 
 class ChargeAtHub final : public ChargingPolicy {
+public:
     ChargeAtHub();
 
+private:
     void on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) override;
 
-private:
     std::vector<coordinate> hubs_;
 };

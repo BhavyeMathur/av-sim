@@ -10,7 +10,7 @@ auto flatten_config(const SimulationConfigs &cfg) {
 
     out.emplace_back("policy.matching", cfg.policy.matching);
     out.emplace_back("policy.charging", cfg.policy.charging);
-    out.emplace_back("policy.charging_hubs", std::to_string(cfg.policy.charging_hubs));
+    out.emplace_back("policy.charging_hubs", cfg.policy.charging_hubs);
 
     out.emplace_back("fleet.frac_2_seater", std::to_string(cfg.fleet.frac_2_seater));
     out.emplace_back("fleet.frac_4_seater", std::to_string(cfg.fleet.frac_4_seater));

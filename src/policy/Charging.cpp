@@ -23,8 +23,8 @@ void ChargeInPlace::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
 ChargeAtHub::ChargeAtHub() {
     auto hubs = pd::read_csv(sim::configs.policy.charging_hubs);
 
-    auto lat = pd::column_as_vector<pd::float32>(hubs, "lat");
-    auto lon = pd::column_as_vector<pd::float32>(hubs, "lon");
+    auto lat = pd::column_as_vector<pd::float64>(hubs, "lat");
+    auto lon = pd::column_as_vector<pd::float64>(hubs, "lon");
     auto n_hubs = lat.size();
 
     hubs_.reserve(n_hubs);

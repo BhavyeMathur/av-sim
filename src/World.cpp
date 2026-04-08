@@ -115,7 +115,7 @@ std::unique_ptr<ChargingPolicy> get_charging_policy() {
 
     if (strategy == "in-place")
         return std::make_unique<ChargeInPlace>();
-    else if (strategy == "closest-hub")
+    else if (strategy == "hubs")
         return std::make_unique<ChargeAtHub>();
     else if (strategy == "disable")
         return nullptr;

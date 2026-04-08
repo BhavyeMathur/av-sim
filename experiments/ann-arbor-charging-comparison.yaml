@@ -1,0 +1,26 @@
+sim:
+  length_s: 604800
+  requests_file: data/requests/ann-arbor.parquet
+  riders_file:
+    template: "data/riders/ann-arbor-{fleet.fleet_size}.parquet"
+  h3_resolution: 7
+
+policy:
+  matching: bounded-h3
+
+  charging:
+    values: [ disable, in-place, hubs ]
+  n_hubs:
+    values: [ 1, 2, 5 ]
+    default: 0
+    only_if:
+      policy.charging: [ hubs ]
+
+  charging_hubs:
+    template: "data/charging-hubs/ann-arbor-{policy.n_hubs}.csv"
+
+fleet:
+  fleet_size:
+    values: [ 7500, 10000, 12500, 15000 ]
+  frac_2_seater: 0.0
+  frac_4_seater: 0.0

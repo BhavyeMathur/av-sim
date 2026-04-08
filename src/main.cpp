@@ -88,12 +88,7 @@ int main(int argc, char *argv[]) {
         sem.acquire();
 
         threads.emplace_back([&sem, path]() {
-            try {
-                run(path);
-            } catch (...) {
-                std::cerr << "Run " << path << " failed" << std::endl;
-                sem.release();
-            }
+            run(path);
             sem.release();
         });
     }
