@@ -1,44 +1,75 @@
+from typing import Sequence
 from dataclasses import dataclass, field
 
-import datashader as ds
+import numpy as np
 import pandas as pd
-
-from .cmaps import CMAP_TYPE, default_cmap
 
 
 @dataclass
 class LineLayer:
-    df: pd.DataFrame
-    x0: str
-    y0: str
-    x1: str
-    y1: str
-    cmap: CMAP_TYPE = default_cmap
+    x: Sequence
+    y: Sequence
+    label: str | None = None
+    color: str | None = None
+    linewidth: float = 2.0
+    linestyle: str = "-"
     alpha: float = 1.0
-    how: str = "eq_hist"
-    antialias: bool = False
-    agg: object = field(default_factory=ds.count)
+    marker: str | None = None
+    markersize: float = 5.0
 
 
 @dataclass
-class GridLayer:
-    df: object
-    x: str
-    y: str
-    bins: tuple[int, int] | None = None
-    cmap: CMAP_TYPE = default_cmap
-    alpha: float = 1.0
-    how: str = "eq_hist"
-    agg: object = ds.count()
+class ScatterLayer:
+    x: Sequence
+    y: Sequence
+    label: str | None = None
+    color: str | None = None
+    s: float = 24.0
+    alpha: float = 0.9
 
 
 @dataclass
-class PolygonLayer:
-    polygon: dict | object
-    cmap: CMAP_TYPE = default_cmap
+class HistLayer:
+    x: Sequence
+    label: str | None = None
+    color: str | None = None
+    bins: int | Sequence[float] | None = None
+    alpha: float = 0.75
+    density: bool = False
+    histtype: str = "stepfilled"
+    linewidth: float = 1.5
+
+
+@dataclass
+class PieLayer:
+    values: Sequence[float]
+    labels: Sequence[str] | None = None
+    colors: Sequence[str] | None = None
+    autopct: str | None = "%1.1f%%"
+    startangle: float = 90
+    counterclock: bool = False
+    wedgeprops: dict = field(default_factory=lambda: {"linewidth": 1.0, "edgecolor": "white"})
+
+
+@dataclass
+class StackLayer:
+    x: Sequence
+    ys: Sequence[Sequence[float]] | np.ndarray | pd.DataFrame
+    labels: Sequence[str] | None = None
+    colors: Sequence[str] | None = None
     alpha: float = 1.0
-    how: str = "linear"
-    agg: object = ds.count()
+    baseline: str = "zero"
 
 
-__all__ = ["LineLayer", "GridLayer", "PolygonLayer"]
+@dataclass
+class BarLayer:
+    x: Sequence
+    y: Sequence
+    label: str | None = None
+    color: str | None = None
+    width: float = 0.8
+    alpha: float = 1.0
+    axis: int = 0
+
+
+__all__ = ["LineLayer", "ScatterLayer", "HistLayer", "PieLayer", "StackLayer", "BarLayer"]

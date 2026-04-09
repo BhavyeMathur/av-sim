@@ -1,176 +1,28 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from math import ceil
-from typing import Literal, Sequence
+from collections import defaultdict
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 
-
-def _is_datetime_axis(ax) -> bool:
-    try:
-        converter = ax.xaxis.converter
-        return converter is not None or (len(ax.lines) > 0 and any(
-            np.issubdtype(np.asarray(line.get_xdata()).dtype, np.datetime64) for line in ax.lines))
-    except Exception:
-        return False
-
-
-def _format_datetime_axis(ax, spine_color="#7b8290"):
-    locator = mdates.AutoDateLocator()
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
-    ax.xaxis.set_major_formatter(formatter)
-    ax.tick_params(axis="x", colors=spine_color)
-    ax.tick_params(axis="y", colors=spine_color)
-
-
-def style_title(ax, title: str, subtitle: str | None = None, *, title_color="#111827", subtitle_color="#6b7280",
-                subtitle_size: int = 9, ):
-    ax.set_title(title, loc="left", fontweight="bold", color=title_color, pad=20)
-    if subtitle:
-        ax.text(0.0, 1.02, subtitle, transform=ax.transAxes, ha="left", va="bottom", fontsize=subtitle_size,
-                color=subtitle_color, )
-
-
-def style_plot(ax, title: str, subtitle: str | None = None, *, spine_color="#7b8290", grid_color="#374151",
-               title_color="#111827", subtitle_color="#6b7280", ax_color="#000", ):
-    ax.grid(axis="y", linestyle=(0, (1.2, 2.4)), linewidth=1.0, color=grid_color, alpha=0.55)
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color(spine_color)
-    ax.spines["bottom"].set_color(spine_color)
-
-    ax.tick_params(axis="x", colors=ax_color)
-    ax.tick_params(axis="y", colors=ax_color)
-
-    if _is_datetime_axis(ax):
-        _format_datetime_axis(ax, spine_color=spine_color)
-
-    style_title(ax, title, subtitle=subtitle, title_color=title_color, subtitle_color=subtitle_color)
-
-
-def style_pie(ax, title: str, subtitle: str | None = None, *, title_color="#111827", subtitle_color="#6b7280"):
-    style_title(ax, title, subtitle=subtitle, title_color=title_color, subtitle_color=subtitle_color)
-
-
-LegendStyle = Literal["standard", "fancy"]
-LegendPlacement = Literal["best", "header_right"]
-
-
-@dataclass
-class LegendConfig:
-    enabled: bool = True
-    style: LegendStyle = "standard"
-    placement: LegendPlacement = "header_right"
-    max_rows: int = 2
-    frameon: bool = False
-
-    # Auto layout knobs
-    handlelength: float = 0.75
-    columnspacing: float = 1.2
-    handletextpad: float = 0.45
-    borderaxespad: float = 0.0
-
-    # Marker sizing
-    min_marker_size: float = 6.0
-    max_marker_size: float = 8.0
-
-    # Standard legend defaults
-    standard_loc: str = "best"
-
-    # Fancy legend defaults
-    fancy_loc: str = "upper right"
-    fancy_bbox_to_anchor: tuple[float, float] = (0.98, 1.15)
-
-    def ncols_for(self, n_items: int) -> int:
-        if n_items <= 0:
-            return 1
-        # At most max_rows rows
-        return max(1, ceil(n_items / self.max_rows))
-
-    def marker_size_for(self, n_items: int) -> float:
-        if n_items <= 4:
-            return self.max_marker_size
-        if n_items <= 8:
-            return 7.0
-        return self.min_marker_size
-
-
-@dataclass
-class HistogramConfig:
-    shared_edges: bool = True
-    default_bins: int = 50
-    range: tuple[float, float] | None = None
-
-
-@dataclass
-class LineLayer:
-    x: Sequence
-    y: Sequence
-    label: str | None = None
-    color: str | None = None
-    linewidth: float = 2.0
-    linestyle: str = "-"
-    alpha: float = 1.0
-    marker: str | None = None
-    markersize: float = 5.0
-
-
-@dataclass
-class ScatterLayer:
-    x: Sequence
-    y: Sequence
-    label: str | None = None
-    color: str | None = None
-    s: float = 24.0
-    alpha: float = 0.9
-
-
-@dataclass
-class HistLayer:
-    x: Sequence
-    label: str | None = None
-    color: str | None = None
-    bins: int | Sequence[float] | None = None
-    alpha: float = 0.75
-    density: bool = False
-    histtype: str = "stepfilled"
-    linewidth: float = 1.5
-
-
-@dataclass
-class PieLayer:
-    values: Sequence[float]
-    labels: Sequence[str] | None = None
-    colors: Sequence[str] | None = None
-    autopct: str | None = "%1.1f%%"
-    startangle: float = 90
-    counterclock: bool = False
-    wedgeprops: dict = field(default_factory=lambda: {"linewidth": 1.0, "edgecolor": "white"})
-
-
-@dataclass
-class StackLayer:
-    x: Sequence
-    ys: Sequence[Sequence[float]] | np.ndarray
-    labels: Sequence[str] | None = None
-    colors: Sequence[str] | None = None
-    alpha: float = 1.0
-    baseline: str = "zero"
+from .layers import *
+from .configs import *
+from .style import *
 
 
 class Plot:
-    def __init__(self, title: str, subtitle: str | None = None, *, xlabel: str | None = None, ylabel: str | None = None,
-                 figsize: tuple[float, float] = (10, 6), facecolor: str = "white", dpi: int = 140,
-                 legend: LegendConfig | None = None, histogram: HistogramConfig | None = None):
+    def __init__(self, title: str, subtitle: str | None = None, *,
+                 xlabel: str | None = None,
+                 ylabel: str | None = None,
+                 figsize: tuple[float, float] = (10, 6),
+                 facecolor: str = "white",
+                 dpi: int = 140,
+                 legend: LegendConfig | None = None,
+                 histogram: HistogramConfig | None = None):
         self.title = title
         self.subtitle = subtitle
         self.xlabel = xlabel
@@ -187,48 +39,90 @@ class Plot:
         self._hist_layers: list[HistLayer] = []
         self._stack_layers: list[StackLayer] = []
         self._pie_layers: list[PieLayer] = []
+        self._bar_layers: list[BarLayer] = []
 
-    # ---------- add layers ----------
-
-    def add_line(self, x, y, *, label: str | None = None, color: str | None = None, linewidth: float = 2.0,
-                 linestyle: str = "-", alpha: float = 1.0, marker: str | None = None,
-                 markersize: float = 5.0, ) -> Plot:
+    def add_line(self, x, y, *,
+                 label: str | None = None,
+                 color: str | None = None,
+                 linewidth: float = 2.0,
+                 linestyle: str = "-",
+                 alpha: float = 1.0,
+                 marker: str | None = None,
+                 markersize: float = 5.0) -> Plot:
         self._line_layers.append(
             LineLayer(x=x, y=y, label=label, color=color, linewidth=linewidth, linestyle=linestyle, alpha=alpha,
                       marker=marker, markersize=markersize, ))
         return self
 
-    def add_scatter(self, x, y, *, label: str | None = None, color: str | None = None, s: float = 24.0,
+    def add_scatter(self, x, y, *,
+                    label: str | None = None,
+                    color: str | None = None,
+                    s: float = 24.0,
                     alpha: float = 0.9) -> Plot:
         self._scatter_layers.append(ScatterLayer(x=x, y=y, label=label, color=color, s=s, alpha=alpha))
         return self
 
-    def add_hist(self, x, *, label: str | None = None, color: str | None = None,
-                 bins: int | Sequence[float] | None = None, alpha: float = 1.0, density: bool = False,
-                 histtype: str = "stepfilled", linewidth: float = 1.5) -> Plot:
+    def add_hist(self, x, *,
+                 label: str | None = None,
+                 color: str | None = None,
+                 bins: int | Sequence[float] | None = None,
+                 alpha: float = 1.0,
+                 density: bool = False,
+                 histtype: str = "stepfilled",
+                 linewidth: float = 1.5) -> Plot:
         self._hist_layers.append(
             HistLayer(x=x, label=label, color=color, bins=bins, alpha=alpha, density=density, histtype=histtype,
                       linewidth=linewidth, ))
         return self
 
-    def add_stackplot(self, x, ys, *, labels: Sequence[str] | None = None, colors: Sequence[str] | None = None,
-                      alpha: float = 1.0, baseline: str = "zero", ) -> Plot:
+    def add_stackplot(self, x, ys, *,
+                      labels: Sequence[str] | None = None,
+                      colors: Sequence[str] | None = None,
+                      alpha: float = 1.0,
+                      baseline: str = "zero") -> Plot:
         self._stack_layers.append(
             StackLayer(x=x, ys=ys, labels=labels, colors=colors, alpha=alpha, baseline=baseline, ))
         return self
 
-    def add_pie(self, values: Sequence[float], *, labels: Sequence[str] | None = None,
-                colors: Sequence[str] | None = None, autopct: str | None = "%1.1f%%", startangle: float = 90,
-                counterclock: bool = False, wedgeprops: dict | None = None, ) -> Plot:
+    def add_pie(self, values: Sequence[float], *,
+                labels: Sequence[str] | None = None,
+                colors: Sequence[str] | None = None,
+                autopct: str | None = "%1.1f%%",
+                startangle: float = 90,
+                counterclock: bool = False,
+                wedgeprops: dict | None = None) -> Plot:
         self._pie_layers.append(
             PieLayer(values=values, labels=labels, colors=colors, autopct=autopct, startangle=startangle,
                      counterclock=counterclock, wedgeprops=wedgeprops or {"linewidth": 1.0, "edgecolor": "white"}, ))
         return self
 
-    # ---------- helpers ----------
+    def add_barplot(self, x, y, *,
+                    label: str | None = None,
+                    color: str | None = None,
+                    width: float = 0.8,
+                    alpha: float = 1.0,
+                    axis: int = 0) -> Plot:
+        self._bar_layers.append(
+            BarLayer(
+                x=x,
+                y=y,
+                label=label,
+                color=color,
+                width=width,
+                alpha=alpha,
+                axis=axis,
+            )
+        )
+        return self
 
     def _has_cartesian(self) -> bool:
-        return bool(self._line_layers or self._scatter_layers or self._hist_layers or self._stack_layers)
+        return bool(
+            self._line_layers
+            or self._scatter_layers
+            or self._hist_layers
+            or self._stack_layers
+            or self._bar_layers
+        )
 
     def _has_pie(self) -> bool:
         return bool(self._pie_layers)
@@ -298,6 +192,25 @@ class Plot:
                 resolved.append(self.histogram.default_bins)
         return resolved
 
+    def _get_or_create_axes(self, ax):
+        max_axis = 0
+        for layer in self._bar_layers:
+            max_axis = max(max_axis, layer.axis)
+        for layer in self._line_layers:
+            max_axis = max(max_axis, getattr(layer, "axis", 0))
+        for layer in self._scatter_layers:
+            max_axis = max(max_axis, getattr(layer, "axis", 0))
+
+        axes = [ax]
+        for i in range(1, max_axis + 1):
+            twin = ax.twinx()
+            if i > 1:
+                twin.spines["right"].set_position(("axes", 1 + 0.08 * (i - 1)))
+                twin.set_frame_on(True)
+                twin.patch.set_visible(False)
+            axes.append(twin)
+        return axes
+
     def _collect_fancy_legend_handles(self):
         handles = []
 
@@ -334,36 +247,65 @@ class Plot:
                               markeredgecolor=color, label=label))
         return out
 
-    def _apply_legend(self, ax):
+    def _legend_draw(self, ax, handles, ncols: int, standard: bool):
+        if standard:
+            ax.legend(handles=handles, frameon=self.legend.frameon, loc=self.legend.standard_loc)
+            return
+
+        kwargs = dict(
+            handles=handles,
+            frameon=self.legend.frameon,
+            ncol=ncols,
+            handlelength=self.legend.handlelength,
+            handletextpad=self.legend.handletextpad,
+            columnspacing=self.legend.columnspacing,
+            borderaxespad=self.legend.borderaxespad,
+        )
+
+        if self.legend.placement == "header_right":
+            ax.legend(
+                loc=self.legend.fancy_loc,
+                bbox_to_anchor=self.legend.fancy_bbox_to_anchor,
+                **kwargs,
+            )
+        else:
+            ax.legend(loc="best", **kwargs)
+
+    def _apply_legend_from_axes(self, axes: list):
         if not self.legend.enabled:
             return
 
         if self.legend.style == "standard":
-            handles, labels = ax.get_legend_handles_labels()
+            handles = []
+            labels = []
+            for ax in axes:
+                h, l = ax.get_legend_handles_labels()
+                handles.extend(h)
+                labels.extend(l)
+
             if labels:
-                ax.legend(frameon=self.legend.frameon, loc=self.legend.standard_loc)
+                self._legend_draw(
+                    axes[0],
+                    handles=handles,
+                    ncols=1,
+                    standard=True,
+                )
             return
 
         handles = self._collect_fancy_legend_handles()
         if not handles:
-            handles, labels = ax.get_legend_handles_labels()
-            if not labels:
+            raw_handles = []
+            raw_labels = []
+            for ax in axes:
+                h, l = ax.get_legend_handles_labels()
+                raw_handles.extend(h)
+                raw_labels.extend(l)
+            if not raw_labels:
                 return
-            handles = handles or ax.get_legend_handles_labels()[0]
+            handles = raw_handles
 
         ncols = self.legend.ncols_for(len(handles))
-
-        if self.legend.placement == "header_right":
-            ax.legend(handles=handles, frameon=self.legend.frameon, loc=self.legend.fancy_loc,
-                      bbox_to_anchor=self.legend.fancy_bbox_to_anchor, ncol=ncols,
-                      columnspacing=self.legend.columnspacing, handletextpad=self.legend.handletextpad,
-                      borderaxespad=self.legend.borderaxespad, handlelength=self.legend.handlelength)
-        else:
-            ax.legend(handles=handles, frameon=self.legend.frameon, loc="best", ncol=ncols,
-                      columnspacing=self.legend.columnspacing, handletextpad=self.legend.handletextpad,
-                      borderaxespad=self.legend.borderaxespad, handlelength=self.legend.handlelength)
-
-    # ---------- rendering ----------
+        self._legend_draw(axes[0], handles=handles, ncols=ncols, standard=False)
 
     def render(self):
         if not self._has_cartesian() and not self._has_pie():
@@ -390,41 +332,121 @@ class Plot:
         return fig, ax
 
     def _render_cartesian(self, ax):
+        axes = self._get_or_create_axes(ax)
+
         resolved_hist_bins = self._resolve_hist_bins_for_each_layer()
 
         for layer, bins in zip(self._hist_layers, resolved_hist_bins):
             x = self._clean_numeric(layer.x)
-            ax.hist(x, bins=bins, label=layer.label, color=layer.color, alpha=layer.alpha, density=layer.density,
-                    histtype=layer.histtype, linewidth=layer.linewidth, )
+            axes[0].hist(
+                x,
+                bins=bins,
+                label=layer.label,
+                color=layer.color,
+                alpha=layer.alpha,
+                density=layer.density,
+                histtype=layer.histtype,
+                linewidth=layer.linewidth,
+            )
 
         for layer in self._stack_layers:
             ys = np.asarray(layer.ys)
             if ys.ndim != 2:
                 raise ValueError("Stackplot ys must be 2D with one series per row.")
-            ax.stackplot(layer.x, *list(ys), labels=layer.labels, colors=layer.colors, alpha=layer.alpha,
-                         baseline=layer.baseline, )
+            axes[0].stackplot(
+                layer.x,
+                *list(ys),
+                labels=layer.labels,
+                colors=layer.colors,
+                alpha=layer.alpha,
+                baseline=layer.baseline,
+            )
+
+        self._render_bars(axes)
 
         for layer in self._line_layers:
-            ax.plot(layer.x, layer.y, label=layer.label, color=layer.color, linewidth=layer.linewidth,
-                    linestyle=layer.linestyle, alpha=layer.alpha, marker=layer.marker, markersize=layer.markersize, )
+            target_ax = axes[getattr(layer, "axis", 0)]
+            target_ax.plot(
+                layer.x,
+                layer.y,
+                label=layer.label,
+                color=layer.color,
+                linewidth=layer.linewidth,
+                linestyle=layer.linestyle,
+                alpha=layer.alpha,
+                marker=layer.marker,
+                markersize=layer.markersize,
+            )
 
         for layer in self._scatter_layers:
-            ax.scatter(layer.x, layer.y, label=layer.label, color=layer.color, s=layer.s, alpha=layer.alpha, )
+            target_ax = axes[getattr(layer, "axis", 0)]
+            target_ax.scatter(
+                layer.x,
+                layer.y,
+                label=layer.label,
+                color=layer.color,
+                s=layer.s,
+                alpha=layer.alpha,
+            )
 
-        style_plot(ax, self.title, self.subtitle)
+        style_plot(axes[0], self.title, self.subtitle)
 
         if self.xlabel:
-            ax.set_xlabel(self.xlabel, color="#374151")
+            axes[0].set_xlabel(self.xlabel, color="#374151")
         if self.ylabel:
-            ax.set_ylabel(self.ylabel, color="#374151")
+            axes[0].set_ylabel(self.ylabel, color="#374151")
 
-        self._apply_legend(ax)
+        self._apply_legend_from_axes(axes)
 
     def _render_pie(self, ax, layer: PieLayer):
         ax.pie(layer.values, labels=layer.labels, colors=layer.colors, autopct=layer.autopct,
-               startangle=layer.startangle, counterclock=layer.counterclock, wedgeprops=layer.wedgeprops, )
+               startangle=layer.startangle, counterclock=layer.counterclock, wedgeprops=layer.wedgeprops)
         ax.set_aspect("equal")
         style_pie(ax, self.title, self.subtitle)
+
+    def _render_bars(self, axes: list):
+        if not self._bar_layers:
+            return
+
+        layers_by_axis = defaultdict(list)
+        for layer in self._bar_layers:
+            layers_by_axis[layer.axis].append(layer)
+
+        for axis_idx, layers in layers_by_axis.items():
+            cur_ax = axes[axis_idx]
+            n = len(layers)
+
+            for j, layer in enumerate(layers):
+                x = np.asarray(layer.x)
+                y = np.asarray(layer.y)
+
+                if len(x) != len(y):
+                    raise ValueError("Bar layer x and y must have the same length.")
+
+                # Handle datetime/categorical/numeric x
+                if np.issubdtype(x.dtype, np.number):
+                    x_pos = x.astype(float)
+                    base_width = layer.width
+                else:
+                    # categorical / object / datetime-like -> place at integer positions
+                    x_pos = np.arange(len(x), dtype=float)
+                    base_width = layer.width
+
+                bar_width = base_width / max(n, 1)
+                offset = (j - (n - 1) / 2.0) * bar_width
+
+                cur_ax.bar(x_pos + offset, y,
+                           width=bar_width, label=layer.label, color=layer.color, alpha=layer.alpha, align="center")
+
+                # Set tick labels once per axis for non-numeric x
+                if not np.issubdtype(x.dtype, np.number):
+                    cur_ax.set_xticks(x_pos)
+                    cur_ax.set_xticklabels(x)
+
+            # style extra y-axes a bit
+            if axis_idx > 0:
+                cur_ax.spines["top"].set_visible(False)
+                cur_ax.spines["left"].set_visible(False)
 
     def save(self, path: str, **savefig_kwargs) -> None:
         fig, _ = self.render()
@@ -436,4 +458,4 @@ class Plot:
         plt.show()
 
 
-__all__ = ["Plot", "LegendConfig", "HistogramConfig", "style_plot"]
+__all__ = ["Plot", "LegendConfig", "HistogramConfig"]
