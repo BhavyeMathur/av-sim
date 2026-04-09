@@ -14,7 +14,7 @@ from shapely.geometry import shape
 from shapely.ops import transform as shapely_transform
 
 from .basemap import *
-from .layers import *
+from .geolayers import *
 from .blend import BLEND_FUNCS
 from .cmaps import CMAP_TYPE, default_cmap
 
