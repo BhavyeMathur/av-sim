@@ -1,4 +1,4 @@
-RIDER_STATES = {
+VEHICLE_STATES = {
     0: "dead",
     1: "idle",
     2: "fm",

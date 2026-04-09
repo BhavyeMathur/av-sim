@@ -1,10 +1,21 @@
 import pandas as pd
 
-from .constants import RIDER_STATES
+from .constants import VEHICLE_STATES
 
 import warnings
 
 warnings.filterwarnings("ignore")
+
+
+def compute_vehicle_state_durations(waypoints: pd.DataFrame) -> pd.DataFrame:
+    df = waypoints.copy()
+
+    df["dt"] = df.groupby("rider")["timestamp"].shift(-1) - df["timestamp"]
+    df = df.dropna(subset=["dt"])
+    return (df.groupby(["rider", "state"])["dt"]
+            .sum()
+            .unstack(fill_value=0)
+            .rename(columns=VEHICLE_STATES))
 
 
 def load_results(run):
@@ -30,16 +41,9 @@ def load_results(run):
     output["lm_time"] = output["arrived_drop_at"] - output["pickedup_at"]
     output["drop_time"] = output["completed_at"] - output["arrived_drop_at"]
 
-    rider_states = waypoints_output.copy()
+    vehicle_state_durations = compute_vehicle_state_durations(waypoints_output)
 
-    rider_states["dt"] = rider_states.groupby("rider")["timestamp"].shift(-1) - rider_states["timestamp"]
-    rider_states = rider_states.dropna(subset=["dt"])
-    rider_states = (rider_states.groupby(["rider", "state"])["dt"]
-                    .sum()
-                    .unstack(fill_value=0, )
-                    .rename(columns=RIDER_STATES))
-
-    return all_output, output, fleet_output, waypoints_output, rider_states
+    return all_output, output, fleet_output, waypoints_output, vehicle_state_durations
 
 
 def compute_requests_stats(all_output, output):
@@ -73,20 +77,20 @@ def compute_requests_stats(all_output, output):
     }
 
 
-def compute_rider_stats(waypoints_output, rider_states):
-    lifetime = rider_states.sum(axis=1).sum()
+def compute_rider_stats(waypoints_output, vehicle_state_durations):
+    lifetime = vehicle_state_durations.sum(axis=1).sum()
 
     output = dict()
-    for col in rider_states.columns:
-        output[f"{col}_pct"] = float(100 * rider_states[col].sum() / lifetime)
+    for col in vehicle_state_durations.columns:
+        output[f"{col}_pct"] = float(100 * vehicle_state_durations[col].sum() / lifetime)
     return output
 
 
 def compute_stats(run):
-    all_output, output, fleet_output, waypoints_output, rider_states = load_results(run)
+    all_output, output, fleet_output, waypoints_output, vehicle_state_durations = load_results(run)
 
     stats = compute_requests_stats(all_output, output)
-    stats.update(compute_rider_stats(waypoints_output, rider_states))
+    stats.update(compute_rider_stats(waypoints_output, vehicle_state_durations))
 
     return stats
 
@@ -114,4 +118,4 @@ def print_stats(output, all_output, stats, rider_stats=None):
             print(f"Charge: {rider_stats['charge_pct']:.2f}%")
 
 
-__all__ = ["compute_stats"]
+__all__ = ["compute_stats", "compute_vehicle_state_durations"]
