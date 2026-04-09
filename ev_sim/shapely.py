@@ -7,6 +7,8 @@ import shapely
 from shapely.geometry import shape, Polygon, Point
 from scipy.spatial import cKDTree
 
+import osmnx as ox
+
 MODE_TYPE = Literal["all", "outbound", "inbound", "internal", "external"]
 
 
@@ -340,6 +342,99 @@ def snap_trips_to_boundary_points(df: pd.DataFrame,
     return pd.concat(out, ignore_index=True) if out else df.iloc[0:0].copy()
 
 
+def _extract_points(geom) -> list:
+    if geom is None or shapely.is_empty(geom):
+        return []
+
+    gt = geom.geom_type
+    if gt == "Point":
+        return [geom]
+    if gt == "MultiPoint":
+        return list(geom.geoms)
+    if gt == "GeometryCollection":
+        out = []
+        for g in geom.geoms:
+            out.extend(_extract_points(g))
+        return out
+
+    return []
+
+
+def _dedupe_points(points: list[Point], tolerance_deg: float = 1e-5) -> list[Point]:
+    """
+    Deduplicate nearby points by snapping to a grid.
+    tolerance_deg=1e-5 is about 1 meter in latitude.
+    """
+    if not points:
+        return []
+
+    seen = {}
+    for p in points:
+        key = (round(p.x / tolerance_deg), round(p.y / tolerance_deg))
+        if key not in seen:
+            seen[key] = p
+    return list(seen.values())
+
+
+def get_road_boundary_intersections(polygon_geojson: dict,
+                                    network_type: str = "drive",
+                                    keep: tuple[str, ...] = ("motorway_link", "primary_link",
+                                                             "secondary", "secondary_link"),
+                                    dedupe_tol_deg: float = 1e-4) -> pd.DataFrame:
+    """
+    Return a DataFrame with columns [lat, lon] for road/polygon-boundary crossings.
+    Coordinates are in degrees.
+
+    dedupe_tol_deg:
+      1e-5  ~ about 1 m in latitude
+      5e-5  ~ about 5 m
+      1e-4  ~ about 11 m
+    """
+    poly = shape(polygon_geojson)
+    boundary = poly.boundary
+
+    G = ox.graph_from_polygon(poly, network_type=network_type, simplify=False, truncate_by_edge=True)
+    edges = ox.graph_to_gdfs(G, nodes=False, fill_edge_geometry=True)
+    edges = edges[edges["highway"].apply(lambda x: any(h in keep for h in (x if isinstance(x, list) else [x])))]
+
+    # quick bbox filter
+    minx, miny, maxx, maxy = poly.bounds
+    edges = edges.cx[minx:maxx, miny:maxy]
+
+    # filter roads to remove self-crossings (basically removing roads that briefly exit and re-enter the polygon)
+    # by filtering those such that one endpoint lies outside the polygon and the other lies inside
+    cross = []
+    for geom in edges.geometry.to_numpy():
+        coords = np.asarray(geom.coords)
+        p0 = shapely.Point(coords[0])
+        p1 = shapely.Point(coords[-1])
+
+        inside0 = poly.covers(p0)  # inside or on boundary
+        inside1 = poly.covers(p1)  # inside or on boundary
+
+        cross.append(bool(inside0) ^ bool(inside1))  # ^ ensures bool inside0 != inside1 (i.e. exactly 1 is inside)
+
+    edges = edges[np.array(cross)]
+
+    pts = []
+    for geom in edges.geometry.to_numpy():
+        inter = shapely.intersection(geom, boundary)
+        pts.extend(_extract_points(inter))
+
+    if not pts:
+        return pd.DataFrame(columns=["lon", "lat"])
+
+    arr = np.array([(p.x, p.y) for p in pts], dtype=np.float64)
+
+    # deduplication by snapping to a grid
+    qx = np.round(arr[:, 0] / dedupe_tol_deg).astype(np.int64)
+    qy = np.round(arr[:, 1] / dedupe_tol_deg).astype(np.int64)
+    _, keep = np.unique(np.column_stack([qx, qy]), axis=0, return_index=True)
+    arr = arr[np.sort(keep)]
+
+    return pd.DataFrame({"lon": arr[:, 0], "lat": arr[:, 1]})
+
+
 def sample_points_in_polygon(polygon_geojson, n, radians=False, seed=None) -> pd.DataFrame:
     if seed is not None:
         np.random.seed(seed)
@@ -370,4 +465,5 @@ def sample_points_in_polygon(polygon_geojson, n, radians=False, seed=None) -> pd
     return df
 
 
-__all__ = ["clip_trips_to_region", "snap_trips_to_boundary_points", "sample_points_in_polygon"]
+__all__ = ["clip_trips_to_region", "snap_trips_to_boundary_points", "sample_points_in_polygon",
+           "get_road_boundary_intersections"]
