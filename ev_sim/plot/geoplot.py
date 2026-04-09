@@ -3,11 +3,15 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 
 import datashader as ds
 import datashader.transfer_functions as tf
 from PIL import Image
 from pyproj import Transformer
+
+from shapely.geometry import shape
+from shapely.ops import transform as shapely_transform
 
 from .basemap import *
 from .layers import *
@@ -79,9 +83,15 @@ class GeoPlot:
                  alpha: float = 1.0,
                  how: str = "eq_hist",
                  agg=ds.count()) -> GeoPlot:
-        self._layers.append(
-            GridLayer(df, x, y, bins=bins, cmap=cmap, alpha=alpha, how=how, agg=agg)
-        )
+        self._layers.append(GridLayer(df, x, y, bins=bins, cmap=cmap, alpha=alpha, how=how, agg=agg))
+        return self
+
+    def add_polygon(self, polygon, *,
+                    cmap: CMAP_TYPE = default_cmap,
+                    alpha: float = 1.0,
+                    how: str = "linear",
+                    agg=ds.count()) -> "GeoPlot":
+        self._layers.append(PolygonLayer(polygon=polygon, cmap=cmap, alpha=alpha, how=how, agg=agg))
         return self
 
     def _project_point_df(self, layer) -> pd.DataFrame:
@@ -94,18 +104,23 @@ class GeoPlot:
         return pts
 
     def _project_line_df(self, layer: LineLayer) -> pd.DataFrame:
-        x0, y0 = self._transformer.transform(
-            layer.df[layer.x0].to_numpy(),
-            layer.df[layer.y0].to_numpy(),
-        )
-        x1, y1 = self._transformer.transform(
-            layer.df[layer.x1].to_numpy(),
-            layer.df[layer.y1].to_numpy(),
-        )
+        x0, y0 = self._transformer.transform(layer.df[layer.x0].to_numpy(),
+                                             layer.df[layer.y0].to_numpy())
+        x1, y1 = self._transformer.transform(layer.df[layer.x1].to_numpy(),
+                                             layer.df[layer.y1].to_numpy())
 
         trips = pd.DataFrame({"x0": x0, "y0": y0, "x1": x1, "y1": y1})
         trips = trips.replace([np.inf, -np.inf], np.nan).dropna()
         return trips
+
+    def _project_polygon_df(self, layer):
+        geom = shape(layer.polygon) if isinstance(layer.polygon, dict) else layer.polygon
+        geom_3857 = shapely_transform(self._transformer.transform, geom)
+
+        if geom_3857.is_empty:
+            return gpd.GeoDataFrame(geometry=[], crs="EPSG:3857")
+
+        return gpd.GeoDataFrame({"value": [1]}, geometry=[geom_3857], crs="EPSG:3857")
 
     def _compute_extent(self, projected_layers: Iterable[pd.DataFrame]):
         if self.bbox_latlon is not None:
@@ -121,14 +136,24 @@ class GeoPlot:
             if len(df) == 0:
                 continue
 
-            if {"x0", "x1", "y0", "y1"}.issubset(df.columns):
+            cols = set(df.columns)
+
+            if {"x0", "x1", "y0", "y1"}.issubset(cols):
                 xs.append(df["x0"].to_numpy())
                 xs.append(df["x1"].to_numpy())
                 ys.append(df["y0"].to_numpy())
                 ys.append(df["y1"].to_numpy())
-            elif {"x", "y"}.issubset(df.columns):
+
+            elif {"x", "y"}.issubset(cols):
                 xs.append(df["x"].to_numpy())
                 ys.append(df["y"].to_numpy())
+
+            elif "geometry" in cols:
+                bounds = np.array([g.bounds for g in df["geometry"] if g is not None and not g.is_empty])
+                if len(bounds):
+                    xs.append(bounds[:, [0, 2]].ravel())
+                    ys.append(bounds[:, [1, 3]].ravel())
+
             else:
                 raise ValueError(f"Unsupported projected layer columns: {list(df.columns)}")
 
@@ -160,6 +185,8 @@ class GeoPlot:
                 projected.append(self._project_line_df(layer))
             elif isinstance(layer, GridLayer):
                 projected.append(self._project_point_df(layer))
+            elif isinstance(layer, PolygonLayer):
+                projected.append(self._project_polygon_df(layer))
             else:
                 raise TypeError(f"Unsupported layer type: {type(layer).__name__}")
 
@@ -198,18 +225,20 @@ class GeoPlot:
                     nx, ny = layer.bins
                     grid_canvas = ds.Canvas(plot_width=nx, plot_height=ny, x_range=x_range, y_range=y_range)
                     agg = grid_canvas.points(data, x="x", y="y", agg=layer.agg)
+            elif isinstance(layer, PolygonLayer):
+                agg = canvas.polygons(data, geometry="geometry", agg=layer.agg)
             else:
                 raise TypeError(f"Unsupported layer type: {type(layer).__name__}")
 
             layer_img = tf.shade(agg, cmap=layer.cmap, how=layer.how).to_pil().convert("RGBA")
-            
+
             if isinstance(layer, GridLayer) and layer.bins is not None:
                 layer_img = layer_img.resize((self.width, height), resample=Image.NEAREST)
 
             layer_img = self._apply_alpha(layer_img, layer.alpha)
             final = self.blend(final, layer_img)
 
-        if labels_img is not None:
+        if self.labels and labels_img is not None:
             final = Image.alpha_composite(final, labels_img)
 
         return final

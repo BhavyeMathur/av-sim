@@ -1,4 +1,3 @@
-from typing import Sequence
 from dataclasses import dataclass, field
 
 import datashader as ds
@@ -22,17 +21,6 @@ class LineLayer:
 
 
 @dataclass
-class HexbinLayer:
-    df: object
-    x: str
-    y: str
-    cmap: CMAP_TYPE = default_cmap
-    alpha: float = 1.0
-    how: str = "eq_hist"
-    agg: object = ds.count()
-
-
-@dataclass
 class GridLayer:
     df: object
     x: str
@@ -44,4 +32,13 @@ class GridLayer:
     agg: object = ds.count()
 
 
-__all__ = ["LineLayer", "HexbinLayer", "GridLayer"]
+@dataclass
+class PolygonLayer:
+    polygon: dict | object
+    cmap: CMAP_TYPE = default_cmap
+    alpha: float = 1.0
+    how: str = "linear"
+    agg: object = ds.count()
+
+
+__all__ = ["LineLayer", "GridLayer", "PolygonLayer"]

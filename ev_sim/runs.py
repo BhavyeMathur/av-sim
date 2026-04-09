@@ -94,6 +94,7 @@ class _Query:
         sql = """
               SELECT r.id, \
                      r.duration_ms, \
+                     r.output_dir, \
                      s.*
               FROM runs r
                        LEFT JOIN statistics s ON s.run_id = r.id \
