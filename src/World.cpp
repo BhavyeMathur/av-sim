@@ -212,7 +212,7 @@ void create_world() {
             max_size = std::max(max_size, sim::events.size());
             bar.update(100 - (100.0f * sim::events.size()) / max_size);
 
-            i = 10000;
+            i = 100000;
         }
         i--;
 

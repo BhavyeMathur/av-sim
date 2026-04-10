@@ -1,5 +1,4 @@
-from .geoplot import *
+from .geo import *
 from .plot import *
 from .cmaps import *
 from .blend import *
-from .basemap import *
