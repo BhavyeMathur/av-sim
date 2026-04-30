@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from .constants import VEHICLE_STATES
 
@@ -32,7 +33,6 @@ def load_results(run):
 
     output = pd.read_parquet(f"{output_dir}/requests.parquet")
     output = requests.merge(output, left_index=True, right_index=True, validate="1:1")
-    output = compute_vehicle_state_durations(output)
 
     fleet_output = pd.read_parquet(f"{output_dir}/fleet.parquet")
     fleet_output.set_index("timestamp", inplace=True)
@@ -47,38 +47,58 @@ def load_results(run):
 def compute_request_statistics(requests, completed=None):
     if "fm_time" not in requests.columns:
         compute_request_time_columns(requests)
-
     if completed is None:
-        completed = requests[requests["completed"]]
+        completed = requests.loc[requests["completed"]]
 
-    mean_fm_dist = float(completed["fm_dist"].mean())  # km
-    mean_fm_time = float(completed["fm_time"].mean() / 60)  # mins
-    mean_fm_speed = float(mean_fm_dist / (mean_fm_time / 60))  # kmph
+    metric_names = ["fm_dist", "fm_time", "fm_speed", "lm_dist", "lm_time", "lm_speed", "response_time", "pickup_time",
+                    "drop_time", "pax"]
 
-    mean_lm_dist = float(completed["lm_dist"].mean())  # km
-    mean_lm_time = float(completed["lm_time"].mean() / 60)  # mins
-    mean_lm_speed = float(mean_lm_dist / (mean_lm_time / 60))  # kmph
-
-    return {
-        "total": len(requests),
-        "completed": len(completed),
-        "dropped": len(requests) - len(completed),
-        "service_level": 100 * len(completed) / len(requests),  # %
-
-        "fm_dist": mean_fm_dist,
-        "fm_time": mean_fm_time,
-        "fm_speed": mean_fm_speed,
-
-        "lm_dist": mean_lm_dist,
-        "lm_time": mean_lm_time,
-        "lm_speed": mean_lm_speed,
-
-        "response_time": float(completed["response_time"].mean() / 60),  # mins
-        "pickup_time": float(completed["pickup_time"].mean() / 60),  # mins
-        "drop_time": float(completed["drop_time"].mean() / 60),  # mins
-
-        "pax": float(completed["pax"].mean()),
+    total = len(requests)
+    n_completed = len(completed)
+    stats = {
+        "total": total,
+        "completed": n_completed,
+        "dropped": total - n_completed,
+        "service_level": 100.0 * n_completed / total if total else np.nan,
     }
+
+    if n_completed == 0:
+        for r in ["mean", "std", "q1", "median", "q3"]:
+            for m in metric_names:
+                stats[f"{r}_{m}"] = np.nan
+        return stats
+
+    fm_dist = completed["fm_dist"].to_numpy(dtype=np.float64, copy=False)
+    fm_time = completed["fm_time"].to_numpy(dtype=np.float64, copy=False)
+    lm_dist = completed["lm_dist"].to_numpy(dtype=np.float64, copy=False)
+    lm_time = completed["lm_time"].to_numpy(dtype=np.float64, copy=False)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        data = np.vstack([
+            fm_dist,
+            fm_time / 60.0,
+            60.0 * fm_dist / fm_time,
+            lm_dist,
+            lm_time / 60.0,
+            60.0 * lm_dist / lm_time,
+            completed["response_time"].to_numpy(dtype=np.float64, copy=False) / 60.0,
+            completed["pickup_time"].to_numpy(dtype=np.float64, copy=False) / 60.0,
+            completed["drop_time"].to_numpy(dtype=np.float64, copy=False) / 60.0,
+            completed["pax"].to_numpy(dtype=np.float64, copy=False),
+        ])
+
+    means = np.mean(data, axis=1)
+    stds = np.std(data, axis=1)
+    q1, medians, q3 = np.quantile(data, [0.25, 0.5, 0.75], axis=1)
+
+    for i, name in enumerate(metric_names):
+        stats[f"mean_{name}"] = float(means[i])
+        stats[f"std_{name}"] = float(stds[i])
+        stats[f"q1_{name}"] = float(q1[i])
+        stats[f"median_{name}"] = float(medians[i])
+        stats[f"q3_{name}"] = float(q3[i])
+
+    return stats
 
 
 def compute_rider_stats(waypoints, vehicle_state_durations):

@@ -1,5 +1,5 @@
 sim:
-  region: "washtenaw"
+  region: "se-michigan"
 
   length_s: 604800
   requests_file:
@@ -14,6 +14,6 @@ policy:
 
 fleet:
   fleet_size:
-    values: [ 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000 ]
+    values: [ 30000, 35000, 40000, 45000, 50000 ]
   frac_2_seater: 0.0
   frac_4_seater: 0.0

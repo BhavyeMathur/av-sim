@@ -6,6 +6,20 @@ import pandas as pd
 
 
 @dataclass
+class AuxLineStyle:
+    color: str | None = None
+    linewidth: float = 1.25
+    linestyle: str = "--"
+    alpha: float = 0.9
+
+
+@dataclass
+class BandStyle:
+    color: str | None = None
+    alpha: float = 0.15
+
+
+@dataclass
 class LineLayer:
     x: Sequence
     y: Sequence
@@ -16,6 +30,27 @@ class LineLayer:
     alpha: float = 1.0
     marker: str | None = None
     markersize: float = 5.0
+    axis: int = 0
+
+    lower: Sequence | None = None
+    upper: Sequence | None = None
+
+    lower_style: AuxLineStyle | None = None
+    upper_style: AuxLineStyle | None = None
+
+    fill_between: bool = False
+    band_style: BandStyle | None = None
+
+
+@dataclass
+class VLineLayer:
+    x: Sequence
+    label: str | None = None
+    color: str | None = None
+    linewidth: float = 1.5
+    linestyle: str = "--"
+    alpha: float = 0.9
+    axis: int = 0
 
 
 @dataclass
@@ -72,4 +107,5 @@ class BarLayer:
     axis: int = 0
 
 
-__all__ = ["LineLayer", "ScatterLayer", "HistLayer", "PieLayer", "StackLayer", "BarLayer"]
+__all__ = ["LineLayer", "VLineLayer", "ScatterLayer", "HistLayer", "PieLayer", "StackLayer", "BarLayer",
+           "AuxLineStyle", "BandStyle"]

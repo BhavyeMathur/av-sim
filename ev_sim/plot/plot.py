@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Sequence
+from typing import Sequence, Callable
 
 import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.ticker import FuncFormatter
 
 from .layers import *
 from .configs import *
@@ -35,11 +36,18 @@ class Plot:
         self.histogram = histogram or HistogramConfig()
 
         self._line_layers: list[LineLayer] = []
+        self._vline_layers: list[VLineLayer] = []
         self._scatter_layers: list[ScatterLayer] = []
         self._hist_layers: list[HistLayer] = []
         self._stack_layers: list[StackLayer] = []
         self._pie_layers: list[PieLayer] = []
         self._bar_layers: list[BarLayer] = []
+
+        self._x_tick_unit: str | None = None
+        self._x_tick_formatter: Callable | None = None
+
+        self._y_tick_units: dict[int, str] = {}
+        self._y_tick_formatters: dict[int, Callable] = {}
 
     def add_line(self, x, y, *,
                  label: str | None = None,
@@ -48,10 +56,91 @@ class Plot:
                  linestyle: str = "-",
                  alpha: float = 1.0,
                  marker: str | None = None,
-                 markersize: float = 5.0) -> Plot:
+                 markersize: float = 5.0,
+                 axis: int = 0,
+
+                 lower=None,
+                 upper=None,
+
+                 lower_color: str | None = None,
+                 upper_color: str | None = None,
+                 aux_linewidth: float = 1.25,
+                 aux_linestyle: str = "--",
+                 aux_alpha: float = 0.9,
+
+                 fill_between: bool = False,
+                 band_color: str | None = None,
+                 band_alpha: float = 0.15) -> Plot:
+
+        lower_style = None
+        upper_style = None
+        band_style = None
+
+        if lower is not None:
+            lower_style = AuxLineStyle(
+                color=lower_color if lower_color is not None else color,
+                linewidth=aux_linewidth,
+                linestyle=aux_linestyle,
+                alpha=aux_alpha,
+            )
+
+        if upper is not None:
+            upper_style = AuxLineStyle(
+                color=upper_color if upper_color is not None else color,
+                linewidth=aux_linewidth,
+                linestyle=aux_linestyle,
+                alpha=aux_alpha,
+            )
+
+        if fill_between and lower is not None and upper is not None:
+            band_style = BandStyle(
+                color=band_color if band_color is not None else color,
+                alpha=band_alpha,
+            )
+
         self._line_layers.append(
-            LineLayer(x=x, y=y, label=label, color=color, linewidth=linewidth, linestyle=linestyle, alpha=alpha,
-                      marker=marker, markersize=markersize, ))
+            LineLayer(
+                x=x,
+                y=y,
+                label=label,
+                color=color,
+                linewidth=linewidth,
+                linestyle=linestyle,
+                alpha=alpha,
+                marker=marker,
+                markersize=markersize,
+                axis=axis,
+
+                lower=lower,
+                upper=upper,
+                lower_style=lower_style,
+                upper_style=upper_style,
+
+                fill_between=(fill_between and lower is not None and upper is not None),
+                band_style=band_style,
+            )
+        )
+
+        return self
+
+    def add_vline(self, x, *,
+                  label: str | None = None,
+                  color: str | None = None,
+                  linewidth: float = 1.5,
+                  linestyle: str = "--",
+                  alpha: float = 0.9,
+                  axis: int = 0) -> Plot:
+        self._vline_layers.append(
+            VLineLayer(
+                x=x,
+                label=label,
+                color=color,
+                linewidth=linewidth,
+                linestyle=linestyle,
+                alpha=alpha,
+                axis=axis,
+            )
+        )
         return self
 
     def add_scatter(self, x, y, *,
@@ -202,13 +291,21 @@ class Plot:
             max_axis = max(max_axis, getattr(layer, "axis", 0))
 
         axes = [ax]
+
         for i in range(1, max_axis + 1):
             twin = ax.twinx()
+
+            # never let the twin axis draw its own background/frame box
+            twin.patch.set_visible(False)
+            twin.spines["left"].set_visible(False)
+            twin.spines["top"].set_visible(False)
+            twin.spines["bottom"].set_visible(False)
+
             if i > 1:
                 twin.spines["right"].set_position(("axes", 1 + 0.08 * (i - 1)))
-                twin.set_frame_on(True)
-                twin.patch.set_visible(False)
+
             axes.append(twin)
+
         return axes
 
     def _collect_fancy_legend_handles(self):
@@ -229,6 +326,10 @@ class Plot:
 
         # Lines and scatters
         for layer in self._line_layers:
+            if layer.label:
+                handles.append(("line", layer.label, layer.color))
+
+        for layer in self._vline_layers:
             if layer.label:
                 handles.append(("line", layer.label, layer.color))
 
@@ -366,9 +467,66 @@ class Plot:
 
         for layer in self._line_layers:
             target_ax = axes[getattr(layer, "axis", 0)]
+
+            x = np.asarray(layer.x)
+            y = np.asarray(layer.y)
+
+            if layer.lower is not None:
+                lower = np.asarray(layer.lower)
+                if lower.shape != y.shape:
+                    raise ValueError("Line layer lower must have the same shape as y.")
+            else:
+                lower = None
+
+            if layer.upper is not None:
+                upper = np.asarray(layer.upper)
+                if upper.shape != y.shape:
+                    raise ValueError("Line layer upper must have the same shape as y.")
+            else:
+                upper = None
+
+            if layer.fill_between:
+                if lower is None or upper is None:
+                    raise ValueError("fill_between=True requires both lower and upper.")
+                band_color = layer.band_style.color if layer.band_style else layer.color
+                band_alpha = layer.band_style.alpha if layer.band_style else 0.15
+                target_ax.fill_between(
+                    x,
+                    lower,
+                    upper,
+                    color=band_color,
+                    alpha=band_alpha,
+                    linewidth=0,
+                    zorder=1,
+                )
+
+            if lower is not None and layer.lower_style is not None:
+                target_ax.plot(
+                    x,
+                    lower,
+                    color=layer.lower_style.color,
+                    linewidth=layer.lower_style.linewidth,
+                    linestyle=layer.lower_style.linestyle,
+                    alpha=layer.lower_style.alpha,
+                    label=None,
+                    zorder=2,
+                )
+
+            if upper is not None and layer.upper_style is not None:
+                target_ax.plot(
+                    x,
+                    upper,
+                    color=layer.upper_style.color,
+                    linewidth=layer.upper_style.linewidth,
+                    linestyle=layer.upper_style.linestyle,
+                    alpha=layer.upper_style.alpha,
+                    label=None,
+                    zorder=2,
+                )
+
             target_ax.plot(
-                layer.x,
-                layer.y,
+                x,
+                y,
                 label=layer.label,
                 color=layer.color,
                 linewidth=layer.linewidth,
@@ -376,6 +534,7 @@ class Plot:
                 alpha=layer.alpha,
                 marker=layer.marker,
                 markersize=layer.markersize,
+                zorder=3,
             )
 
         for layer in self._scatter_layers:
@@ -389,13 +548,31 @@ class Plot:
                 alpha=layer.alpha,
             )
 
-        style_plot(axes[0], self.title, self.subtitle)
+        for layer in self._vline_layers:
+            target_ax = axes[getattr(layer, "axis", 0)]
+            target_ax.axvline(
+                x=layer.x,
+                label=layer.label,
+                color=layer.color,
+                linewidth=layer.linewidth,
+                linestyle=layer.linestyle,
+                alpha=layer.alpha,
+                zorder=4,
+            )
+
+        spine_color = "#7b8290"
+
+        style_plot(axes[0], self.title, self.subtitle, spine_color=spine_color)
+        for extra_ax in axes[1:]:
+            extra_ax.spines["right"].set_color(spine_color)
+            extra_ax.tick_params(axis="y", colors="#374151")
 
         if self.xlabel:
             axes[0].set_xlabel(self.xlabel, color="#374151")
         if self.ylabel:
             axes[0].set_ylabel(self.ylabel, color="#374151")
 
+        self._apply_axis_tick_formatters(axes)
         self._apply_legend_from_axes(axes)
 
     def _render_pie(self, ax, layer: PieLayer):
@@ -447,6 +624,43 @@ class Plot:
             if axis_idx > 0:
                 cur_ax.spines["top"].set_visible(False)
                 cur_ax.spines["left"].set_visible(False)
+
+    @staticmethod
+    def _make_unit_formatter(unit: str, decimals: int | None = None, prefix: bool = False):
+        def _fmt(x, pos=None):
+            if np.isclose(x, round(x)):
+                s = f"{int(round(x))}"
+            elif decimals is not None:
+                s = f"{x:.{decimals}f}"
+            else:
+                s = f"{x:g}"
+
+            return f"{unit}{s}" if prefix else f"{s}{unit}"
+
+        return _fmt
+
+    def set_x_axis_unit(self, unit: str, *,
+                        decimals: int | None = None,
+                        prefix: bool = False) -> Plot:
+        self._x_tick_unit = unit
+        self._x_tick_formatter = self._make_unit_formatter(unit, decimals=decimals, prefix=prefix)
+        return self
+
+    def set_y_axis_unit(self, unit: str, *,
+                        axis: int = 0,
+                        decimals: int | None = None,
+                        prefix: bool = False) -> Plot:
+        self._y_tick_units[axis] = unit
+        self._y_tick_formatters[axis] = self._make_unit_formatter(unit, decimals=decimals, prefix=prefix)
+        return self
+
+    def _apply_axis_tick_formatters(self, axes: list):
+        if self._x_tick_formatter is not None:
+            axes[0].xaxis.set_major_formatter(FuncFormatter(self._x_tick_formatter))
+
+        for axis_idx, formatter in self._y_tick_formatters.items():
+            if 0 <= axis_idx < len(axes):
+                axes[axis_idx].yaxis.set_major_formatter(FuncFormatter(formatter))
 
     def save(self, path: str, **savefig_kwargs) -> None:
         fig, _ = self.render()

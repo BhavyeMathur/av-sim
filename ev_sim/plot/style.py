@@ -16,6 +16,7 @@ def _format_datetime_axis(ax, spine_color="#7b8290"):
     formatter = mdates.ConciseDateFormatter(locator)
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(formatter)
+
     ax.tick_params(axis="x", colors=spine_color)
     ax.tick_params(axis="y", colors=spine_color)
 
