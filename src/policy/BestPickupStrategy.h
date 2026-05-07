@@ -9,6 +9,10 @@ class BestPickupStrategy {
 public:
     struct RiderInfo : public Strategy::RiderInfo {
         timestamp_t pickup_at = std::numeric_limits<timestamp_t>::max();
+
+        bool operator<(const RiderInfo &other) const { return pickup_at < other.pickup_at; }
+
+        bool operator>(const RiderInfo &other) const { return pickup_at > other.pickup_at; }
     };
 
     static constexpr float speed_kmps = 40.0 / 3600;

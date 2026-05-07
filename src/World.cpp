@@ -106,6 +106,8 @@ std::unique_ptr<Strategy> get_allocation_engine() {
         return std::make_unique<BoundedH3BestPickupStrategy>();
     else if (strategy == "ringed-h3")
         return std::make_unique<RingedH3BestPickupStrategy>();
+    else if (strategy == "vehicle-batching")
+        return std::make_unique<VehicleBatching>();
 
     throw std::invalid_argument("unknown strategy");
 }
