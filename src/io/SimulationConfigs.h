@@ -10,6 +10,8 @@ struct SimulationConfigs {
         std::string requests_file;
         std::string riders_file;
         std::string output;
+
+        float cos_ref_lat;
     };
 
     struct Policy {

@@ -17,7 +17,7 @@ static std::string db_path = "runs/runs.sqlite3";
 
 
 namespace sim {
-    thread_local SimulationConfigs configs;
+    SimulationConfigs configs;
 }
 
 void run(const std::string &config) {

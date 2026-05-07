@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any
 
 import re
+import pickle
 from copy import deepcopy
 from itertools import product
 from pathlib import Path
@@ -246,6 +247,10 @@ def generate_runs_from_yaml(experiment_yaml_path: str | Path, output_root: str |
 
         config["name"] = experiment_name
         config["sim"]["output"] = str(run_dir / "raw/")
+
+        with open(f"data/requests/{config["sim"]["region"]}.meta", "rb") as f:
+            meta = pickle.load(f)
+            config["sim"]["cos_ref_lat"] = meta["cos_ref_lat"]
 
         config_path = run_dir / "config.yaml"
         with open(config_path, "w") as f:

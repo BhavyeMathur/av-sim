@@ -6,9 +6,15 @@
 #include "riders/RiderBattery.h"
 #include "riders/RiderPAX.h"
 #include "riders/RiderSource.h"
-
 #include "routing/Distance.h"
+#include "events/EventBus.h"
 
+namespace sim {
+    extern EventBus events;
+
+    extern RiderBattery rider_battery;
+    extern RiderPAX rider_pax;
+}
 
 class Strategy {
 public:
@@ -36,10 +42,26 @@ protected:
     // checks for global feasibility parameters such as
     //  1. passenger capacity (pax)
     //  2. battery life
-    [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &info);
+    template<bool check_pax = true>
+        [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &info) {
+            if (rider.n_requests_assigned() >= 2)
+                return false;
+
+            info.fm_dist_km = sim::distance(rider.eta_pos(), request.pick_coord);
+            if (!sim::rider_battery.check_capacity(rider.id(), info.fm_dist_km + request.predicted_lm_dist))
+                return false;
+
+            if constexpr (check_pax) {
+                info.pax = sim::rider_pax.capacity(rider.id());
+                if (info.pax < request.pax)
+                    return false;
+            }
+
+            return true;
+        }
 
 private:
-    virtual rider_id_t match(const Request &request) = 0;
+    virtual void assign_request(const Request &request) = 0;
 
     void on_request(const RequestCreated &event);
 };
@@ -86,7 +108,21 @@ template<class Derived>
                     } -> std::same_as<bool>;
                 };
 
-        rider_id_t match(const Request &request) override {
+        void assign_request(const Request &req) override {
+            auto rider_id = match(req);
+            if (rider_id == INVALID_RIDER_ID)
+                return;
+
+            auto &rider = sim::riders[rider_id];
+            sim::events.trigger(RequestAssigned{req.id, rider.id()});
+
+            rider.push_waypoints(Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
+                                 Waypoint{req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup},
+                                 Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
+                                 Waypoint{req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
+        }
+
+        rider_id_t match(const Request &request) {
             static_assert(sequential_strategy_v);
 
             // this is the data type of the iterable containing pools of candidate riders

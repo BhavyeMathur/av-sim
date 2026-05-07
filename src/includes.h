@@ -40,11 +40,11 @@ class Request;
 #include "io/SimulationConfigs.h"
 
 namespace sim {
-    extern thread_local SimulationConfigs configs;
+    extern SimulationConfigs configs;
 
-    extern thread_local timestamp_t clock;
+    extern timestamp_t clock;
 
-    extern thread_local std::vector<Rider> riders;
+    extern std::vector<Rider> riders;
 }
 
 #if DEBUG

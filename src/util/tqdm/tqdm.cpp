@@ -1,4 +1,5 @@
 #include "tqdm.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -24,8 +25,12 @@ void bar::update(unsigned int percent) {
     int remaining_sec =
             (percent < 100) ? static_cast<int>(rate * (100 - percent)) : 0;
 
-    fprintf(stderr, "\r\33[2K[%-*.*s] %3u%% | [%2llds<%2ds]",
-            m_width, filled, pbstr.c_str(), percent, elapsed_sec, remaining_sec);
+    if (isatty(fileno(stderr)))
+        fprintf(stderr, "\r\33[2K[%-*.*s] %3u%% | [%2llds<%2ds]",
+                m_width, filled, pbstr.c_str(), percent, elapsed_sec, remaining_sec);
+    else
+        fprintf(stderr, "progress: %3u%% | elapsed=%llds remaining=%ds\n",
+                percent, elapsed_sec, remaining_sec);
     fflush(stderr);
 
     if (percent == 100)

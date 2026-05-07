@@ -3,7 +3,7 @@
 #include "extern.h"
 #include "routing/H3.h"
 
-thread_local rider_id_t Rider::next_id_ = 0;
+rider_id_t Rider::next_id_ = 0;
 
 void Rider::login() {
     if (state_ != State::Dead)

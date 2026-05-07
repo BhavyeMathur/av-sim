@@ -5,7 +5,7 @@
 
 
 namespace sim {
-    extern thread_local timestamp_t clock;
+    extern timestamp_t clock;
 }
 
 template<typename T, auto FieldPtr>

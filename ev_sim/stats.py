@@ -63,7 +63,7 @@ def compute_request_statistics(requests, completed=None):
     }
 
     if n_completed == 0:
-        for r in ["mean", "std", "q1", "median", "q3"]:
+        for r in ["mean", "std", "q1", "median", "q3", "pct90", "pct95"]:
             for m in metric_names:
                 stats[f"{r}_{m}"] = np.nan
         return stats
@@ -89,7 +89,7 @@ def compute_request_statistics(requests, completed=None):
 
     means = np.mean(data, axis=1)
     stds = np.std(data, axis=1)
-    q1, medians, q3 = np.quantile(data, [0.25, 0.5, 0.75], axis=1)
+    q1, medians, q3, pct90, pct95 = np.quantile(data, [0.25, 0.5, 0.75, 0.9, 0.95], axis=1)
 
     for i, name in enumerate(metric_names):
         stats[f"mean_{name}"] = float(means[i])
@@ -97,6 +97,8 @@ def compute_request_statistics(requests, completed=None):
         stats[f"q1_{name}"] = float(q1[i])
         stats[f"median_{name}"] = float(medians[i])
         stats[f"q3_{name}"] = float(q3[i])
+        stats[f"pct90_{name}"] = float(pct90[i])
+        stats[f"pct95_{name}"] = float(pct95[i])
 
     return stats
 

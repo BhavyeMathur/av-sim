@@ -1,0 +1,20 @@
+sim:
+  length_s: 604800
+  requests_file: data/requests/ann-arbor.parquet
+  riders_file:
+    template: "data/riders/ann-arbor-{fleet.fleet_size}.parquet"
+  h3_resolution: 7
+
+policy:
+  matching: vehicle-batching
+
+  charging: hubs
+  n_hubs: 2
+  charging_hubs:
+    template: "data/charging-hubs/ann-arbor-{policy.n_hubs}.csv"
+
+fleet:
+  fleet_size:
+    values: [ 30000, 35000, 40000, 50000 ]
+  frac_2_seater: 1.0
+  frac_4_seater: 0.0

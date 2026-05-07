@@ -9,10 +9,10 @@
 #include "Request.h"
 
 namespace sim {
-    extern thread_local EventBus events;
+    extern EventBus events;
 
-    extern thread_local RiderBattery rider_battery;
-    extern thread_local RiderPAX rider_pax;
+    extern RiderBattery rider_battery;
+    extern RiderPAX rider_pax;
 
-    extern thread_local std::vector<Request> requests;
+    extern std::vector<Request> requests;
 }

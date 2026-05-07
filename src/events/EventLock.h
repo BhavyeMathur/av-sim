@@ -4,7 +4,7 @@
 #include "EventBus.h"
 
 namespace sim {
-    extern thread_local EventBus events;
+    extern EventBus events;
 }
 
 template<class PayloadT>

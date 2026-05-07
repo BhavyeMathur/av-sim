@@ -121,7 +121,7 @@ public:
     static std::string state_to_string(State state);
 
 private:
-    static thread_local rider_id_t next_id_;
+    static rider_id_t next_id_;
     rider_id_t id_;
 
     ringbuffer<Step> steps_;

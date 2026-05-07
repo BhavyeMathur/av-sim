@@ -9,6 +9,7 @@
 #include "riders/RiderStats.h"
 
 #include "policy/BestPickupStrategy.h"
+#include "policy/VehicleBatching.h"
 #include "policy/Charging.h"
 
 #include <pandas.h>
@@ -16,15 +17,17 @@
 
 
 namespace sim {
-    thread_local EventBus events;
+    EventBus events;
 
-    thread_local timestamp_t clock = 0;
+    timestamp_t clock = 0;
 
-    thread_local std::vector<Request> requests;
-    thread_local std::vector<Rider> riders;
+    std::vector<Request> requests;
+    std::vector<Rider> riders;
 
-    thread_local RiderBattery rider_battery;
-    thread_local RiderPAX rider_pax;
+    RiderBattery rider_battery;
+    RiderPAX rider_pax;
+
+    float cos_ref_lat;
 }
 
 void register_default_events() {
@@ -188,6 +191,8 @@ void save() {
 }
 
 void create_world() {
+    sim::cos_ref_lat = sim::configs.sim.cos_ref_lat;
+
     register_default_events();
 
     create_requests();

@@ -1,5 +1,9 @@
 #include "Distance.h"
 
+namespace sim {
+    extern float cos_ref_lat;
+}
+
 constexpr distance_t EarthRadius = 6371;
 
 distance_t equirectangular_distance(coordinate_t lat1_rad, coordinate_t lon1_rad,

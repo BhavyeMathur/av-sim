@@ -7,7 +7,7 @@ struct NeighborHexCacheEntry {
     std::vector<hex_id_t> hexes;
 };
 
-thread_local std::unordered_map<hex_id_t, NeighborHexCacheEntry> neighbor_hex_cache_;
+std::unordered_map<hex_id_t, NeighborHexCacheEntry> neighbor_hex_cache_;
 
 hex_id_t latlon_to_h3(coordinate c) {
     LatLng g{c.lat, c.lon};

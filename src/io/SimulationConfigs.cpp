@@ -31,6 +31,9 @@ void validate_config(const SimulationConfigs &cfg) {
     if (cfg.sim.length_s <= 0)
         throw std::runtime_error("sim.length_s must be positive");
 
+    if (cfg.sim.cos_ref_lat >= 1 or cfg.sim.cos_ref_lat <= -1)
+        throw std::runtime_error("sim.cos_ref_lat must be in [-1, 1]");
+
     if (cfg.sim.h3_resolution < 0 or cfg.sim.h3_resolution > 15)
         throw std::runtime_error("sim.h3_resolution must be in [0, 15]");
 
@@ -84,6 +87,7 @@ SimulationConfigs load_config(const std::string &yaml_path) {
     cfg.sim.h3_resolution = optional_scalar<int>(sim_node, "h3_resolution", 7);
     cfg.sim.riders_file = require_scalar<std::string>(sim_node, "riders_file");
     cfg.sim.output = require_scalar<std::string>(sim_node, "output");
+    cfg.sim.cos_ref_lat = require_scalar<float>(sim_node, "cos_ref_lat");
 
     cfg.policy.matching = require_scalar<std::string>(policy_node, "matching");
     cfg.policy.charging = optional_scalar<std::string>(policy_node, "charging", "disable");
