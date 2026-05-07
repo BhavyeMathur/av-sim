@@ -6,16 +6,26 @@ namespace sim {
 
 constexpr distance_t EarthRadius = 6371;
 
-distance_t equirectangular_distance(coordinate_t lat1_rad, coordinate_t lon1_rad,
-                                    coordinate_t lat2_rad, coordinate_t lon2_rad) {
+distance_t partial_equirectangular_distance(coordinate_t lat1_rad, coordinate_t lon1_rad,
+                                            coordinate_t lat2_rad, coordinate_t lon2_rad) {
     auto dlon = lon2_rad - lon1_rad;
     auto dlat = lat2_rad - lat1_rad;
-    auto x = dlon * std::cos((lat1_rad + lat2_rad) / 2);
+    auto x = dlon * sim::cos_ref_lat;
 
-    return EarthRadius * std::sqrt(x * x + dlat * dlat);
+    return x * x + dlat * dlat;
+}
+
+distance_t equirectangular_distance(coordinate_t lat1_rad, coordinate_t lon1_rad,
+                                    coordinate_t lat2_rad, coordinate_t lon2_rad) {
+    return EarthRadius * std::sqrt(partial_equirectangular_distance(lat1_rad, lon1_rad, lat2_rad, lon2_rad));
 }
 
 namespace sim {
+    float monotonic_in_distance(coordinate_t lat1_rad, coordinate_t lon1_rad,
+                                coordinate_t lat2_rad, coordinate_t lon2_rad) {
+        return partial_equirectangular_distance(lat1_rad, lon1_rad, lat2_rad, lon2_rad);
+    }
+
     distance_t distance(coordinate_t lat1_rad, coordinate_t lon1_rad, coordinate_t lat2_rad, coordinate_t lon2_rad) {
         return static_cast<distance_t>(0.572)
                + static_cast<distance_t>(1.273) * equirectangular_distance(lat1_rad, lon1_rad, lat2_rad, lon2_rad);

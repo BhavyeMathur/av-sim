@@ -70,6 +70,11 @@ int main(int argc, char *argv[]) {
         db.init_schema();
     }
 
+    // Profiling (single-thread)
+    run(experiments[0]);
+    return 0;
+    // ------------------------
+
     std::vector<std::thread> threads;
     threads.reserve(experiments.size());
 
