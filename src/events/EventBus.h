@@ -11,7 +11,7 @@ class EventBus {
 public:
     EventBus() {
         // enable all callbacks by default
-        for (auto &b : enabled_)
+        for (auto &b: enabled_)
             b = true;
     }
 
@@ -128,7 +128,16 @@ private:
     std::array<std::vector<Handler>, std::variant_size_v<EventPayload>> handlers_;
     std::array<bool, std::variant_size_v<EventPayload>> enabled_{};
 
-    mutable_pq<Event> events_;
+    struct _event_radix_key {
+        using key_type = timestamp_t;
+
+        key_type operator()(const Event &value) const {
+            return value.t;
+        }
+    };
+
+    // mutable_pq<Event> events_;
+    mutable_radix_heap<Event, _event_radix_key> events_;
 
     timestamp_t last_t_ = 0;
 };

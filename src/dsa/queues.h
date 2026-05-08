@@ -1,48 +1,61 @@
 #pragma once
 
 #include "includes.h"
+#include <radix_heap.h>
 
+struct _mutable_heap_key {
+    uint32_t id = 0;   // 0 = invalid
+    uint32_t gen = 0;
+
+    explicit operator bool() const { return id != 0; }
+};
 
 template<class T>
-    class mutable_pq {
+    struct _mutable_heap_record {
+        T value{};
+        uint32_t gen = 0;
+        bool live = false;
+    };
+
+template<class T>
+    struct _key_comparator {
+        using key = _mutable_heap_key;
+        using record = _mutable_heap_record<T>;
+
+        const std::vector<record> *records_ = nullptr;
+
+        bool operator()(key a, key b) const {
+            const auto &ra = (*records_)[a.id].value;
+            const auto &rb = (*records_)[b.id].value;
+            return rb < ra;
+        }
+    };
+
+template<class T, class heap_t>
+    class mutable_heap {
     public:
-        struct key {
-            uint32_t id = 0;   // 0 = invalid
-            uint32_t gen = 0;
+        using key = _mutable_heap_key;
+        using record = _mutable_heap_record<T>;
+        using comp = _key_comparator<T>;
 
-            explicit operator bool() const { return id != 0; }
-        };
-
-        mutable_pq()
-                : q_(key_comparator{this}, std::vector<key>{}) {
+        mutable_heap() {
+            q_ = heap_t(comp{&this->records_});
             records_.resize(1); // slot 0 unused
         }
 
-        mutable_pq(const mutable_pq &) = delete;
+        mutable_heap(const mutable_heap &) = delete;
 
-        mutable_pq &operator=(const mutable_pq &) = delete;
+        mutable_heap &operator=(const mutable_heap &) = delete;
 
-        //  we must rebind comparator to the new 'this'.
-        mutable_pq(mutable_pq &&other) noexcept
-                : records_(std::move(other.records_)),
-                  freelist_(std::move(other.freelist_)),
-                  q_(key_comparator{this}, std::move(other.q_.container())) {}
+        mutable_heap(mutable_heap &&other) noexcept = delete;
 
-        mutable_pq &operator=(mutable_pq &&other) noexcept {
-            if (this == &other) return *this;
-
-            records_ = std::move(other.records_);
-            freelist_ = std::move(other.freelist_);
-
-            // rebuild q_ with comparator bound to this
-            q_ = pq_type(key_comparator{this}, std::move(other.q_.container()));
-            return *this;
-        }
+        mutable_heap &operator=(mutable_heap &&other) noexcept = delete;
 
         void reserve(size_t n) {
             records_.reserve(n + 1);
             freelist_.reserve(n / 2 + 1); // heuristic
-            q_.reserve(n);
+            if constexpr (requires { q_.reserve(n); })
+                q_.reserve(n);
         }
 
         key push(T value) {
@@ -54,7 +67,9 @@ template<class T>
             r.value = std::move(value);
 
             key k{id, r.gen};
-            q_.push(k);
+            push_impl(k, r.value);
+            this->live_size_++;
+
             return k;
         }
 
@@ -68,11 +83,16 @@ template<class T>
 
             r.live = false;
             freelist_.push_back(k.id);
+            live_size_--;
         }
 
         T pop() {
             while (!q_.empty()) {
-                key k = q_.top();
+                key k;
+                if constexpr (requires { q_.top_value(); })
+                    k = q_.top_value();
+                else
+                    k = q_.top();
                 q_.pop();
 
                 if (!k or k.id >= records_.size())
@@ -84,23 +104,18 @@ template<class T>
 
                 r.live = false;
                 freelist_.push_back(k.id);
+                live_size_--;
                 return std::move(r.value);
             }
 
             throw std::out_of_range("called pop() on empty object");
         }
 
-        [[nodiscard]] bool empty() const { return q_.empty(); }
+        [[nodiscard]] bool empty() const { return live_size_ == 0; }
 
-        [[nodiscard]] size_t size() const { return q_.size(); }
+        [[nodiscard]] size_t size() const { return live_size_; }
 
-    private:
-        struct record {
-            T value{};
-            uint32_t gen = 0;
-            bool live = false;
-        };
-
+    protected:
         uint32_t alloc_slot_() {
             if (!freelist_.empty()) {
                 uint32_t id = freelist_.back();
@@ -112,17 +127,48 @@ template<class T>
             return id;
         }
 
-        struct key_comparator {
-            const mutable_pq *owner = nullptr;
+        virtual void push_impl(const key &key, const T &value) = 0;
 
-            bool operator()(key a, key b) const {
-                return owner->records_[b.id].value < owner->records_[a.id].value;
-            }
-        };
-
-        using pq_type = std::priority_queue<key, std::vector<key>, key_comparator>;
-
-        pq_type q_;
+        heap_t q_;
         std::vector<record> records_;
         std::vector<uint32_t> freelist_;
+        size_t live_size_ = 0;
+    };
+
+template<class T>
+    class mutable_pq : public mutable_heap<T,
+            std::priority_queue<_mutable_heap_key, std::vector<_mutable_heap_key>, _key_comparator<T>>> {
+    public:
+        using key = _mutable_heap_key;
+
+    protected:
+        void push_impl(const key &key, const T &value) override {
+            this->q_.push(key);
+        }
+    };
+
+template<class T>
+    struct _default_radix_key {
+        using key_type = T;
+
+        key_type operator()(const T &value) const {
+            return value;
+        }
+    };
+
+template<class T,
+         class KeyOf = _default_radix_key<T>,
+         class RadixKey = typename KeyOf::key_type>
+    class mutable_radix_heap final
+            : public mutable_heap<T, radix_heap<RadixKey, _mutable_heap_key, _key_comparator<T>>> {
+    public:
+        using key = _mutable_heap_key;
+
+    protected:
+        void push_impl(const key &key, const T &value) override {
+            this->q_.push(get_key_(value), key);
+        }
+
+    private:
+        KeyOf get_key_{};
     };
