@@ -56,7 +56,7 @@ public:
     Strategy::Action on_pool_start(const HexRidersSource::pool_t &pool, const RiderInfo &best, const Request &request);
 
 private:
-    HexRidersSource riders;
+    HexRidersSource riders{4};
 };
 
 class RingedH3BestPickupStrategy final : public BestPickupStrategy,

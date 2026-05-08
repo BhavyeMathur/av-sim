@@ -6,7 +6,7 @@ sim:
     template: data/requests/{sim.region}.parquet
   riders_file:
     template: "data/riders/{sim.region}-{fleet.fleet_size}.parquet"
-  h3_resolution: 7
+  h3_resolution: 8
 
 policy:
   matching: bounded-h3
