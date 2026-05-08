@@ -4,7 +4,7 @@
 
 class RiderHexIndex {
 public:
-    using rider_set_t = std::unordered_set<rider_id_t>;
+    using rider_set_t = std::vector<rider_id_t>;
 
     explicit RiderHexIndex(size_t n_riders);
 
@@ -19,5 +19,7 @@ private:
 
 private:
     std::vector<hex_id_t> rider_id_to_hex_id_;
+    std::vector<uint32_t> rider_id_to_pos_;
+
     std::unordered_map<hex_id_t, rider_set_t> hex_id_to_riders_;
 };
