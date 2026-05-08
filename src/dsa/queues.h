@@ -3,152 +3,100 @@
 #include "includes.h"
 #include <radix_heap.h>
 
-struct _mutable_heap_key {
-    uint32_t id = 0;   // 0 = invalid
+struct mutable_heap_key {
+    uint32_t id = 0;
     uint32_t gen = 0;
 
     explicit operator bool() const { return id != 0; }
 };
 
 template<class T>
-    struct _mutable_heap_record {
-        T value{};
-        uint32_t gen = 0;
-        bool live = false;
+    struct mutable_heap_entry {
+        mutable_heap_key key;
+        T value;
+
+        bool operator<(const mutable_heap_entry &other) const {
+            return other.value < value; // min-heap behavior in std::priority_queue
+        }
     };
 
 template<class T>
-    struct _key_comparator {
-        using key = _mutable_heap_key;
-        using record = _mutable_heap_record<T>;
-
-        const std::vector<record> *records_ = nullptr;
-
-        bool operator()(key a, key b) const {
-            const auto &ra = (*records_)[a.id].value;
-            const auto &rb = (*records_)[b.id].value;
-            return rb < ra;
-        }
-    };
-
-template<class T, class heap_t>
-    class mutable_heap {
+    class mutable_pq {
     public:
-        using key = _mutable_heap_key;
-        using record = _mutable_heap_record<T>;
-        using comp = _key_comparator<T>;
-
-        mutable_heap() {
-            q_ = heap_t(comp{&this->records_});
-            records_.resize(1); // slot 0 unused
-        }
-
-        mutable_heap(const mutable_heap &) = delete;
-
-        mutable_heap &operator=(const mutable_heap &) = delete;
-
-        mutable_heap(mutable_heap &&other) noexcept = delete;
-
-        mutable_heap &operator=(mutable_heap &&other) noexcept = delete;
-
-        void reserve(size_t n) {
-            records_.reserve(n + 1);
-            freelist_.reserve(n / 2 + 1); // heuristic
-            if constexpr (requires { q_.reserve(n); })
-                q_.reserve(n);
-        }
+        using key = mutable_heap_key;
+        using entry = mutable_heap_entry<T>;
 
         key push(T value) {
-            const uint32_t id = alloc_slot_();
-            record &r = records_[id];
+            uint32_t id = alloc_id_();
+            uint32_t gen = ++gens_[id];
 
-            r.gen += 1;
-            r.live = true;
-            r.value = std::move(value);
-
-            key k{id, r.gen};
-            push_impl(k, r.value);
-            this->live_size_++;
+            key k{id, gen};
+            q_.push(entry{k, std::move(value)});
+            ++live_size_;
 
             return k;
         }
 
         void erase(key k) {
-            if (!k or k.id >= records_.size())
-                return;
+            if (!valid_(k)) return;
 
-            record &r = records_[k.id];
-            if (!r.live or r.gen != k.gen)
-                return;
-
-            r.live = false;
-            freelist_.push_back(k.id);
-            live_size_--;
+            ++gens_[k.id];
+            free_.push_back(k.id);
+            --live_size_;
         }
 
         T pop() {
             while (!q_.empty()) {
-                key k;
-                if constexpr (requires { q_.top_value(); })
-                    k = q_.top_value();
-                else
-                    k = q_.top();
+                entry e = std::move(const_cast<entry &>(q_.top()));
                 q_.pop();
 
-                if (!k or k.id >= records_.size())
-                    continue;
-                record &r = records_[k.id];
-
-                if (!r.live or r.gen != k.gen)
+                if (!valid_(e.key))
                     continue;
 
-                r.live = false;
-                freelist_.push_back(k.id);
-                live_size_--;
-                return std::move(r.value);
+                ++gens_[e.key.id];
+                free_.push_back(e.key.id);
+                --live_size_;
+
+                return std::move(e.value);
             }
 
-            throw std::out_of_range("called pop() on empty object");
+            throw std::out_of_range("called pop() on empty mutable_pq");
         }
 
-        [[nodiscard]] bool empty() const { return live_size_ == 0; }
+        [[nodiscard]] bool empty() const {
+            return live_size_ == 0;
+        }
 
-        [[nodiscard]] size_t size() const { return live_size_; }
+        [[nodiscard]] size_t size() const {
+            return live_size_;
+        }
 
-    protected:
-        uint32_t alloc_slot_() {
-            if (!freelist_.empty()) {
-                uint32_t id = freelist_.back();
-                freelist_.pop_back();
+    private:
+        uint32_t alloc_id_() {
+            if (!free_.empty()) {
+                uint32_t id = free_.back();
+                free_.pop_back();
                 return id;
             }
-            auto id = static_cast<uint32_t>(records_.size());
-            records_.push_back(record{});
+
+            uint32_t id = static_cast<uint32_t>(gens_.size());
+            gens_.push_back(0);
             return id;
         }
 
-        virtual void push_impl(const key &key, const T &value) = 0;
+        bool valid_(key k) const {
+            return k && k.id < gens_.size() && gens_[k.id] == k.gen;
+        }
 
-        heap_t q_;
-        std::vector<record> records_;
-        std::vector<uint32_t> freelist_;
+        std::priority_queue<entry> q_;
+
+        std::vector<uint32_t> gens_{0};
+        std::vector<uint32_t> free_;
         size_t live_size_ = 0;
     };
 
 template<class T>
-    class mutable_pq : public mutable_heap<T,
-            std::priority_queue<_mutable_heap_key, std::vector<_mutable_heap_key>, _key_comparator<T>>> {
-    public:
-        using key = _mutable_heap_key;
-
-    protected:
-        void push_impl(const key &key, const T &value) override {
-            this->q_.push(key);
-        }
-    };
-
-template<class T>
-    struct _default_radix_key {
+    struct default_radix_key {
         using key_type = T;
 
         key_type operator()(const T &value) const {
@@ -157,18 +105,82 @@ template<class T>
     };
 
 template<class T,
-         class KeyOf = _default_radix_key<T>,
+         class KeyOf = default_radix_key<T>,
          class RadixKey = typename KeyOf::key_type>
-    class mutable_radix_heap final
-            : public mutable_heap<T, radix_heap<RadixKey, _mutable_heap_key, _key_comparator<T>>> {
+    class mutable_radix_heap {
     public:
-        using key = _mutable_heap_key;
+        using key = mutable_heap_key;
+        using entry = mutable_heap_entry<T>;
 
-    protected:
-        void push_impl(const key &key, const T &value) override {
-            this->q_.push(get_key_(value), key);
+        key push(T value) {
+            uint32_t id = alloc_id_();
+            uint32_t gen = ++gens_[id];
+
+            key k{id, gen};
+
+            RadixKey rk = get_key_(value);
+            q_.push(rk, entry{k, std::move(value)});
+
+            ++live_size_;
+            return k;
+        }
+
+        void erase(key k) {
+            if (!valid_(k)) return;
+
+            ++gens_[k.id];
+            free_.push_back(k.id);
+            --live_size_;
+        }
+
+        T pop() {
+            while (!q_.empty()) {
+                entry e = std::move(q_.top_value());
+                q_.pop();
+
+                if (!valid_(e.key))
+                    continue;
+
+                ++gens_[e.key.id];
+                free_.push_back(e.key.id);
+                --live_size_;
+
+                return std::move(e.value);
+            }
+
+            throw std::out_of_range("called pop() on empty mutable_radix_heap");
+        }
+
+        [[nodiscard]] bool empty() const {
+            return live_size_ == 0;
+        }
+
+        [[nodiscard]] size_t size() const {
+            return live_size_;
         }
 
     private:
+        uint32_t alloc_id_() {
+            if (!free_.empty()) {
+                uint32_t id = free_.back();
+                free_.pop_back();
+                return id;
+            }
+
+            uint32_t id = static_cast<uint32_t>(gens_.size());
+            gens_.push_back(0);
+            return id;
+        }
+
+        bool valid_(key k) const {
+            return k && k.id < gens_.size() && gens_[k.id] == k.gen;
+        }
+
+        radix_heap<RadixKey, entry> q_;
+
+        std::vector<uint32_t> gens_{0}; // slot 0 unused
+        std::vector<uint32_t> free_;
+        size_t live_size_ = 0;
+
         KeyOf get_key_{};
     };
