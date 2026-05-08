@@ -1,5 +1,5 @@
 #include "RiderSource.h"
-#include "routing/H3.h"
+#include "routing/Grid.h"
 #include "Request.h"
 
 
@@ -9,8 +9,8 @@ AllRidersSource::AllRidersSource() {
         rider_ids_[0].push_back(i);
 }
 
-HexRidersSource::Range HexRidersSource::candidate_pools(const Request &req) const {
-    auto pick_hex = latlon_to_h3(req.pick_coord);
-    const auto &hexes = hexes_in_increasing_radius(pick_hex, max_radius_);
-    return {index_, hexes};
+CellRidersSource::Range CellRidersSource::candidate_pools(const Request &req) const {
+    auto pick_cell = grid::latlon_to_cell(req.pick_coord);
+    const auto &cells = grid::cells_in_increasing_radius(pick_cell, max_radius_);
+    return {index_, cells};
 }

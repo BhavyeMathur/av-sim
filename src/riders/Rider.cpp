@@ -1,7 +1,7 @@
 #define DEBUG false
 
 #include "extern.h"
-#include "routing/H3.h"
+#include "routing/Grid.h"
 
 rider_id_t Rider::next_id_ = 0;
 
@@ -137,7 +137,7 @@ void Rider::recalculate_eta_at_() {
 
 void Rider::update_eta_pos_(distance_t d, coordinate c) {
     eta_pos_ = c;
-    eta_hex_ = latlon_to_h3(c);
+    eta_cell_ = grid::latlon_to_cell(c);
 
     sim::events.trigger(RiderUpdatedETAPos{id_, d});
 }

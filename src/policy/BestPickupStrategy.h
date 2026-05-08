@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Strategy.h"
-#include "routing/H3.h"
+#include "routing/Grid.h"
 #include "routing/Distance.h"
 
 
@@ -40,10 +40,10 @@ public:
 
     [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
 
-    Strategy::Action on_pool_end(const HexRidersSource::pool_t &, const RiderInfo &best, const Request &);
+    Strategy::Action on_pool_end(const CellRidersSource::pool_t &, const RiderInfo &best, const Request &);
 
 private:
-    HexRidersSource riders;
+    CellRidersSource riders;
 };
 
 class BoundedH3BestPickupStrategy final : public BestPickupStrategy,
@@ -53,10 +53,10 @@ public:
 
     [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
 
-    Strategy::Action on_pool_start(const HexRidersSource::pool_t &pool, const RiderInfo &best, const Request &request);
+    Strategy::Action on_pool_start(const CellRidersSource::pool_t &pool, const RiderInfo &best, const Request &request);
 
 private:
-    HexRidersSource riders{4};
+    CellRidersSource riders{4};
 };
 
 class RingedH3BestPickupStrategy final : public BestPickupStrategy,
@@ -67,5 +67,5 @@ public:
     [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
 
 private:
-    HexRidersSource riders{8};
+    CellRidersSource riders{8};
 };

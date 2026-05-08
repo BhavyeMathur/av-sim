@@ -15,13 +15,13 @@ bool BestPickupStrategy::is_better(BestPickupStrategy::RiderInfo &cand, const Be
     return true;
 }
 
-Strategy::Action GreedyH3BestPickupStrategy::on_pool_end(const HexRidersSource::pool_t &,
+Strategy::Action GreedyH3BestPickupStrategy::on_pool_end(const CellRidersSource::pool_t &,
                                                          const GreedyH3BestPickupStrategy::RiderInfo &best,
                                                          const Request &) {
     return best.rider ? Strategy::Action::Break : Strategy::Action::None;
 }
 
-Strategy::Action BoundedH3BestPickupStrategy::on_pool_start(const HexRidersSource::pool_t &pool,
+Strategy::Action BoundedH3BestPickupStrategy::on_pool_start(const CellRidersSource::pool_t &pool,
                                                             const BoundedH3BestPickupStrategy::RiderInfo &best,
                                                             const Request &request) {
     if (pool.empty() or best.rider == nullptr)
@@ -31,9 +31,9 @@ Strategy::Action BoundedH3BestPickupStrategy::on_pool_start(const HexRidersSourc
     // get the H3 cell of this pool from the first rider in it
     // and calculate an approximate lower bound on the travel time
     // skipping this pool if the lower bound leads to a worse pickup time
-    auto h3_cell = sim::riders[*pool.begin()].eta_hex();
-    auto h3_centroid = h3_to_latlon(h3_cell);
-    auto [_, tau] = approx_eta(h3_centroid, request.pick_coord);
+    auto cell = sim::riders[*pool.begin()].eta_cell();
+    auto centroid = grid::cell_to_latlon(cell);
+    auto [_, tau] = approx_eta(centroid, request.pick_coord);
 
     if (best.pickup_at < tau + sim::clock)
         return Strategy::Action::Skip;

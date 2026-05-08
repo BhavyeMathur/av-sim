@@ -18,8 +18,8 @@ void VehicleBatching::assign_request(const Request &req) {
             continue;
 
         // bounded H3 strategy
-        auto h3_cell = sim::riders[*pool.begin()].eta_hex();
-        auto h3_centroid = h3_to_latlon(h3_cell);
+        auto h3_cell = sim::riders[*pool.begin()].eta_cell();
+        auto h3_centroid = grid::cell_to_latlon(h3_cell);
         auto [_, tau] = approx_eta(h3_centroid, req.pick_coord);
 
         if (nbest >= need and worst_vehicle()->pickup_at < tau + sim::clock)

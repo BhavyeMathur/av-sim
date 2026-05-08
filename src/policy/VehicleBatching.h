@@ -13,5 +13,5 @@ public:
     [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
 
 private:
-    HexRidersSource riders;
+    CellRidersSource riders;
 };

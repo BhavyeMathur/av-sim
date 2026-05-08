@@ -23,10 +23,10 @@ typedef uint32_t timestamp_t;
 typedef uint32_t duration_t;
 
 typedef float distance_t;
-typedef uint64_t hex_id_t;
+typedef uint64_t cell_id_t;
 typedef float speed_t;
 
-static constexpr auto INVALID_HEX_ID = static_cast<hex_id_t >(-1);
+static constexpr auto INVALID_CELL_ID = static_cast<cell_id_t >(-1);
 static constexpr auto INVALID_REQ_ID = static_cast<request_id_t>(-1);
 static constexpr auto INVALID_RIDER_ID = static_cast<rider_id_t>(-1);
 

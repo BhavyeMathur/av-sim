@@ -17,9 +17,9 @@ private:
     std::array<std::vector<rider_id_t>, 1> rider_ids_;
 };
 
-class HexRidersSource {
+class CellRidersSource {
 public:
-    HexRidersSource(uint8_t max_radius = 3)
+    CellRidersSource(uint8_t max_radius = 3)
             : index_(sim::riders.size()),
               max_radius_(max_radius) {}
 
@@ -34,7 +34,7 @@ public:
 
             iterator() = default;
 
-            iterator(const RiderHexIndex *index, const std::vector<hex_id_t> *hexes, size_t pos = 0)
+            iterator(const RiderHexIndex *index, const std::vector<cell_id_t> *hexes, size_t pos = 0)
                     : index_(index),
                       hexes_(hexes),
                       hex_pos_(hexes ? std::min(pos, hexes->size()) : 0) {}
@@ -59,11 +59,11 @@ public:
 
         private:
             const RiderHexIndex *index_ = nullptr;
-            const std::vector<hex_id_t> *hexes_ = nullptr;
+            const std::vector<cell_id_t> *hexes_ = nullptr;
             size_t hex_pos_ = 0;
         };
 
-        Range(const RiderHexIndex &index, const std::vector<hex_id_t> &hexes)
+        Range(const RiderHexIndex &index, const std::vector<cell_id_t> &hexes)
                 : index_(index), hexes_(hexes) {}
 
         [[nodiscard]] iterator begin() const { return {&index_, &hexes_}; }
@@ -72,7 +72,7 @@ public:
 
     private:
         const RiderHexIndex &index_;
-        const std::vector<hex_id_t> &hexes_;
+        const std::vector<cell_id_t> &hexes_;
     };
 
     using pool_t = Range::iterator::value_type;

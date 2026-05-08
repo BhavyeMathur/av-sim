@@ -77,7 +77,7 @@ public:
 
     [[nodiscard]] timestamp_t eta_at() const { return eta_at_; }
 
-    [[nodiscard]] hex_id_t eta_hex() const { return eta_hex_; }
+    [[nodiscard]] cell_id_t eta_cell() const { return eta_cell_; }
 
     [[nodiscard]] State state() { return state_; }
 
@@ -133,7 +133,7 @@ private:
 
     // tail estimates (approximately estimated)
     coordinate eta_pos_{};
-    hex_id_t eta_hex_{};
+    cell_id_t eta_cell_{};
     timestamp_t eta_at_ = 0;
 
     uint8_t n_assigned_ = 0;

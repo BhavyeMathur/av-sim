@@ -191,7 +191,7 @@ void save() {
 }
 
 void create_world() {
-    sim::cos_ref_lat = sim::configs.sim.cos_ref_lat;
+    grid::init();
 
     register_default_events();
 
