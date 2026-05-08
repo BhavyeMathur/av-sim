@@ -1,17 +1,14 @@
-#pragma once
-
-// based on https://github.com/iwiwi/radix-heap
-
-#include "includes.h"
-
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <climits>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+// taken from https://github.com/iwiwi/radix-heap
 
 namespace internal {
     template<bool Is64bit>
@@ -33,19 +30,19 @@ namespace internal {
             }
         };
 
-    template<class T>
+    template<typename T>
         inline constexpr size_t find_bucket(T x, T last) {
             return find_bucket_impl<sizeof(T) == 8>::find_bucket(x, last);
         }
 
-    template<class KeyType, bool IsSigned>
+    template<typename KeyType, bool IsSigned>
         class encoder_impl_integer;
 
-    template<class KeyType>
+    template<typename KeyType>
         class encoder_impl_integer<KeyType, false> {
         public:
-            using key_type = KeyType;
-            using unsigned_key_type = KeyType;
+            typedef KeyType key_type;
+            typedef KeyType unsigned_key_type;
 
             inline static constexpr unsigned_key_type encode(key_type x) {
                 return x;
@@ -56,67 +53,84 @@ namespace internal {
             }
         };
 
-    template<class KeyType>
+    template<typename KeyType>
         class encoder_impl_integer<KeyType, true> {
         public:
-            using key_type = KeyType;
-            using unsigned_key_type = typename std::make_unsigned<KeyType>::type;
+            typedef KeyType key_type;
+            typedef typename std::make_unsigned<KeyType>::type unsigned_key_type;
 
             inline static constexpr unsigned_key_type encode(key_type x) {
                 return static_cast<unsigned_key_type>(x) ^
-                       (unsigned_key_type(1) << unsigned_key_type(
-                               std::numeric_limits<unsigned_key_type>::digits - 1));
+                       (unsigned_key_type(1)
+                               << unsigned_key_type(std::numeric_limits<unsigned_key_type>::digits - 1));
             }
 
             inline static constexpr key_type decode(unsigned_key_type x) {
-                return static_cast<key_type>(
-                        x ^ (unsigned_key_type(1) <<
-                                                  (std::numeric_limits<unsigned_key_type>::digits - 1)));
+                return static_cast<key_type>
+                (x ^ (unsigned_key_type(1) << (std::numeric_limits<unsigned_key_type>::digits - 1)));
             }
         };
 
-    template<class KeyType>
-        class encoder : public encoder_impl_integer<KeyType, std::is_signed<KeyType>::value> {};
-}
+    template<typename KeyType, typename UnsignedKeyType>
+        class encoder_impl_decimal {
+        public:
+            typedef KeyType key_type;
+            typedef UnsignedKeyType unsigned_key_type;
 
-template<class KeyType,
-         class ValueType,
-         class Compare = std::less<ValueType>,
-         class EncoderType = internal::encoder<KeyType>>
+            inline static constexpr unsigned_key_type encode(key_type x) {
+                return raw_cast<key_type, unsigned_key_type>(x) ^
+                       ((-(raw_cast<key_type, unsigned_key_type>(x)
+                               >> (std::numeric_limits<unsigned_key_type>::digits - 1))) |
+                        (unsigned_key_type(1) << (std::numeric_limits<unsigned_key_type>::digits - 1)));
+            }
+
+            inline static constexpr key_type decode(unsigned_key_type x) {
+                return raw_cast<unsigned_key_type, key_type>
+                        (x ^ (((x >> (std::numeric_limits<unsigned_key_type>::digits - 1)) - 1) |
+                              (unsigned_key_type(1) << (std::numeric_limits<unsigned_key_type>::digits - 1))));
+            }
+
+        private:
+            template<typename T, typename U>
+                union raw_cast {
+                public:
+                    constexpr raw_cast(T t) : t_(t) {}
+
+                    operator U() const { return u_; }
+
+                private:
+                    T t_;
+                    U u_;
+                };
+        };
+
+    template<typename KeyType>
+        class encoder : public encoder_impl_integer<KeyType, std::is_signed<KeyType>::value> {};
+
+    template<>
+        class encoder<float> : public encoder_impl_decimal<float, uint32_t> {};
+
+    template<>
+        class encoder<double> : public encoder_impl_decimal<double, uint64_t> {};
+}  // namespace internal
+
+template<typename KeyType, typename ValueType, typename EncoderType = internal::encoder<KeyType>>
     class radix_heap {
     public:
-        using key_type = KeyType;
-        using value_type = ValueType;
-        using compare_type = Compare;
-        using encoder_type = EncoderType;
-        using unsigned_key_type = typename encoder_type::unsigned_key_type;
+        typedef KeyType key_type;
+        typedef ValueType value_type;
+        typedef EncoderType encoder_type;
+        typedef typename encoder_type::unsigned_key_type unsigned_key_type;
 
-    private:
-        using entry_type = std::pair<unsigned_key_type, value_type>;
-
-    public:
-        radix_heap()
-                : size_(0), last_(), compare_(), buckets_() {
+        radix_heap() : size_(0), last_(), buckets_() {
             buckets_min_.fill(std::numeric_limits<unsigned_key_type>::max());
-        }
-
-        explicit radix_heap(compare_type compare)
-                : size_(0), last_(), compare_(std::move(compare)), buckets_() {
-            buckets_min_.fill(std::numeric_limits<unsigned_key_type>::max());
-        }
-
-        void reserve(size_t n) {
-            for (auto &b: buckets_)
-                b.reserve(n / buckets_.size() + 1);
         }
 
         void push(key_type key, const value_type &value) {
             const unsigned_key_type x = encoder_type::encode(key);
             assert(last_ <= x);
-
             ++size_;
             const size_t k = internal::find_bucket(x, last_);
-
             buckets_[k].emplace_back(x, value);
             buckets_min_[k] = std::min(buckets_min_[k], x);
         }
@@ -124,10 +138,8 @@ template<class KeyType,
         void push(key_type key, value_type &&value) {
             const unsigned_key_type x = encoder_type::encode(key);
             assert(last_ <= x);
-
             ++size_;
             const size_t k = internal::find_bucket(x, last_);
-
             buckets_[k].emplace_back(x, std::move(value));
             buckets_min_[k] = std::min(buckets_min_[k], x);
         }
@@ -136,15 +148,10 @@ template<class KeyType,
             void emplace(key_type key, Args &&... args) {
                 const unsigned_key_type x = encoder_type::encode(key);
                 assert(last_ <= x);
-
                 ++size_;
                 const size_t k = internal::find_bucket(x, last_);
-
-                buckets_[k].emplace_back(
-                        std::piecewise_construct,
-                        std::forward_as_tuple(x),
-                        std::forward_as_tuple(std::forward<Args>(args)...));
-
+                buckets_[k].emplace_back(std::piecewise_construct,
+                                         std::forward_as_tuple(x), std::forward_as_tuple(args...));
                 buckets_min_[k] = std::min(buckets_min_[k], x);
             }
 
@@ -155,28 +162,13 @@ template<class KeyType,
 
         value_type &top_value() {
             pull();
-            return *best_;
+            return buckets_[0].back().second;
         }
 
-        const value_type &top_value() const {
-            const_cast<radix_heap *>(this)->pull();
-            return *best_;
-        }
-
-        value_type pop() {
+        void pop() {
             pull();
-
-            auto &b = buckets_[0];
-            value_type value = std::move(*best_);
-
-            if (best_i_ + 1 != b.size())
-                b[best_i_] = std::move(b.back());
-
-            b.pop_back();
+            buckets_[0].pop_back();
             --size_;
-            best_ = nullptr;
-
-            return value;
         }
 
         size_t size() const {
@@ -189,77 +181,41 @@ template<class KeyType,
 
         void clear() {
             size_ = 0;
-            last_ = unsigned_key_type();
-
-            for (auto &b: buckets_)
-                b.clear();
-
+            last_ = key_type();
+            for (auto &b: buckets_) b.clear();
             buckets_min_.fill(std::numeric_limits<unsigned_key_type>::max());
-            best_ = nullptr;
-            best_i_ = 0;
         }
 
-        void swap(radix_heap &a) {
+        void swap(radix_heap<KeyType, ValueType, EncoderType> &a) {
             std::swap(size_, a.size_);
             std::swap(last_, a.last_);
-            std::swap(compare_, a.compare_);
             buckets_.swap(a.buckets_);
             buckets_min_.swap(a.buckets_min_);
-            std::swap(best_, a.best_);
-            std::swap(best_i_, a.best_i_);
         }
 
     private:
         size_t size_;
         unsigned_key_type last_;
-        compare_type compare_;
-
-        std::array<std::vector<entry_type>,
+        std::array<std::vector<std::pair<unsigned_key_type, value_type>>,
                 std::numeric_limits<unsigned_key_type>::digits + 1> buckets_;
-
         std::array<unsigned_key_type,
                 std::numeric_limits<unsigned_key_type>::digits + 1> buckets_min_;
 
-        value_type *best_ = nullptr;
-        size_t best_i_ = 0;
-
         void pull() {
             assert(size_ > 0);
+            if (!buckets_[0].empty()) return;
 
-            if (buckets_[0].empty()) {
-                size_t i;
-                for (i = 1; buckets_[i].empty(); ++i);
+            size_t i;
+            for (i = 1; buckets_[i].empty(); ++i);
+            last_ = buckets_min_[i];
 
-                last_ = buckets_min_[i];
-
-                for (size_t j = 0; j < buckets_[i].size(); ++j) {
-                    const unsigned_key_type x = buckets_[i][j].first;
-                    const size_t k = internal::find_bucket(x, last_);
-
-                    buckets_[k].emplace_back(std::move(buckets_[i][j]));
-                    buckets_min_[k] = std::min(buckets_min_[k], x);
-                }
-
-                buckets_[i].clear();
-                buckets_min_[i] = std::numeric_limits<unsigned_key_type>::max();
+            for (size_t j = 0; j < buckets_[i].size(); ++j) {
+                const unsigned_key_type x = buckets_[i][j].first;
+                const size_t k = internal::find_bucket(x, last_);
+                buckets_[k].emplace_back(std::move(buckets_[i][j]));
+                buckets_min_[k] = std::min(buckets_min_[k], x);
             }
-
-            find_best_();
-        }
-
-        void find_best_() {
-            auto &b = buckets_[0];
-
-            best_i_ = 0;
-            best_ = &b[0].second;
-
-            for (size_t i = 1; i < b.size(); ++i) {
-                auto &value = b[i].second;
-
-                if (compare_(value, *best_)) {
-                    best_i_ = i;
-                    best_ = &value;
-                }
-            }
+            buckets_[i].clear();
+            buckets_min_[i] = std::numeric_limits<unsigned_key_type>::max();
         }
     };
