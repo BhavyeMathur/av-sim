@@ -1,7 +1,7 @@
 #pragma once
 
 #include "includes.h"
-#include "riders/RiderHex.h"
+#include "riders/RiderGrid.h"
 #include "riders/Rider.h"
 
 
@@ -29,23 +29,23 @@ public:
         public:
             using iterator_category = std::input_iterator_tag;
             using iterator_concept = std::input_iterator_tag;
-            using value_type = RiderHexIndex::rider_set_t;
+            using value_type = RiderGrid::rider_set_t;
             using difference_type = std::ptrdiff_t;
 
             iterator() = default;
 
-            iterator(const RiderHexIndex *index, const std::vector<cell_id_t> *hexes, size_t pos = 0)
+            iterator(const RiderGrid *index, const std::vector<cell_id_t> *cells, size_t pos = 0)
                     : index_(index),
-                      hexes_(hexes),
-                      hex_pos_(hexes ? std::min(pos, hexes->size()) : 0) {}
+                      cells_(cells),
+                      cell_pos_(cells ? std::min(pos, cells->size()) : 0) {}
 
-            const RiderHexIndex::rider_set_t &operator*() const {
-                return index_->riders_in_hex((*hexes_)[hex_pos_]);
+            const RiderGrid::rider_set_t &operator*() const {
+                return index_->riders_in_cell((*cells_)[cell_pos_]);
             }
 
             iterator &operator++() {
-                if (hex_pos_ < hexes_->size())
-                    ++hex_pos_;
+                if (cell_pos_ < cells_->size())
+                    ++cell_pos_;
                 return *this;
             }
 
@@ -58,21 +58,21 @@ public:
             bool operator==(const iterator &other) const = default;
 
         private:
-            const RiderHexIndex *index_ = nullptr;
-            const std::vector<cell_id_t> *hexes_ = nullptr;
-            size_t hex_pos_ = 0;
+            const RiderGrid *index_ = nullptr;
+            const std::vector<cell_id_t> *cells_ = nullptr;
+            size_t cell_pos_ = 0;
         };
 
-        Range(const RiderHexIndex &index, const std::vector<cell_id_t> &hexes)
-                : index_(index), hexes_(hexes) {}
+        Range(const RiderGrid &index, const std::vector<cell_id_t> &cells)
+                : index_(index), cells_(cells) {}
 
-        [[nodiscard]] iterator begin() const { return {&index_, &hexes_}; }
+        [[nodiscard]] iterator begin() const { return {&index_, &cells_}; }
 
-        [[nodiscard]] iterator end() const { return {&index_, &hexes_, hexes_.size()}; }
+        [[nodiscard]] iterator end() const { return {&index_, &cells_, cells_.size()}; }
 
     private:
-        const RiderHexIndex &index_;
-        const std::vector<cell_id_t> &hexes_;
+        const RiderGrid &index_;
+        const std::vector<cell_id_t> &cells_;
     };
 
     using pool_t = Range::iterator::value_type;
@@ -80,6 +80,6 @@ public:
     [[nodiscard]] Range candidate_pools(const Request &req) const;
 
 private:
-    RiderHexIndex index_;
+    RiderGrid index_;
     int max_radius_;
 };
