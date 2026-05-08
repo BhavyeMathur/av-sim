@@ -1,7 +1,7 @@
 #define DEBUG false
 
 #include "extern.h"
-#include "routing/Grid.h"
+#include "routing/grid/Grid.h"
 
 rider_id_t Rider::next_id_ = 0;
 
