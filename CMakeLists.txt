@@ -115,9 +115,12 @@ fetchcontent_makeavailable(yaml-cpp)
 # SQLite
 find_package(SQLite3 REQUIRED)
 
+# faster data structures
+find_package(absl CONFIG REQUIRED)
+
 # other sources
 add_subdirectory(src/util/pandas)
 add_subdirectory(src/util/tqdm)
-target_link_libraries(sim PRIVATE pandas tqdm h3 yaml-cpp SQLite::SQLite3)
+target_link_libraries(sim PRIVATE pandas tqdm h3 yaml-cpp SQLite::SQLite3 absl::flat_hash_map)
 
 target_compile_definitions(sim PRIVATE)

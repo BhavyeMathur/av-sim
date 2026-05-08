@@ -1,6 +1,7 @@
 #pragma once
 
 #include <coordinate.h>
+#include "absl/container/flat_hash_map.h"
 
 namespace grid {
     constexpr bool use_fast_rect_grid_v = true;
@@ -41,5 +42,5 @@ namespace grid {
         std::vector<cell_id_t> cells;
     };
 
-    extern std::unordered_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
+    extern absl::flat_hash_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
 }

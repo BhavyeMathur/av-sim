@@ -24,7 +24,9 @@ Strategy::Action GreedyH3BestPickupStrategy::on_pool_end(const CellRidersSource:
 Strategy::Action BoundedH3BestPickupStrategy::on_pool_start(const CellRidersSource::pool_t &pool,
                                                             const BoundedH3BestPickupStrategy::RiderInfo &best,
                                                             const Request &request) {
-    if (pool.empty() or best.rider == nullptr)
+    if (pool.empty())
+        return Strategy::Action::Skip;
+    if (best.rider == nullptr)
         return Strategy::Action::None;
 
     // in this strategy, each pool corresponds to a single H3 cell
@@ -38,5 +40,13 @@ Strategy::Action BoundedH3BestPickupStrategy::on_pool_start(const CellRidersSour
     if (best.pickup_at < tau + sim::clock)
         return Strategy::Action::Skip;
 
+    return Strategy::Action::None;
+}
+
+Strategy::Action BoundedH3BestPickupStrategy::on_pool_end(const CellRidersSource::pool_t &,
+                                                          const BoundedH3BestPickupStrategy::RiderInfo &best,
+                                                          const Request &) {
+    if (best.rider and best.rider->state() == Rider::State::Idle)
+        return Strategy::Action::Break;
     return Strategy::Action::None;
 }

@@ -54,6 +54,8 @@ public:
     [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
 
     Strategy::Action on_pool_start(const CellRidersSource::pool_t &pool, const RiderInfo &best, const Request &request);
+    
+    Strategy::Action on_pool_end(const CellRidersSource::pool_t &, const RiderInfo &best, const Request &);
 
 private:
     CellRidersSource riders{4};

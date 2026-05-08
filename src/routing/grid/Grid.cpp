@@ -5,7 +5,7 @@ namespace sim {
 }
 
 namespace grid {
-    std::unordered_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
+    absl::flat_hash_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
 
     void init() {
         sim::cos_ref_lat = sim::configs.sim.cos_ref_lat;

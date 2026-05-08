@@ -5,7 +5,7 @@ struct H3CellCacheEntry {
     coordinate centroid;
 };
 
-std::unordered_map<cell_id_t, H3CellCacheEntry> h3_cell_cache_;
+absl::flat_hash_map<cell_id_t, H3CellCacheEntry> h3_cell_cache_;
 
 namespace grid::h3 {
     cell_id_t latlon_to_cell(coordinate c) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "includes.h"
+#include "absl/container/flat_hash_map.h"
 
 class RiderGrid {
 public:
@@ -21,5 +22,5 @@ private:
     std::vector<cell_id_t> rider_id_to_cell_;
     std::vector<uint32_t> rider_id_to_pos_;
 
-    std::unordered_map<cell_id_t, rider_set_t> cell_to_riders_;
+    absl::flat_hash_map<cell_id_t, rider_set_t> cell_to_riders_;
 };
