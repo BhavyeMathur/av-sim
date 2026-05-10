@@ -13,6 +13,6 @@ policy:
   charging: in-place
 
 fleet:
-  fleet_size: 40000
+  fleet_size: 60000
   frac_2_seater: 0.0
   frac_4_seater: 0.0

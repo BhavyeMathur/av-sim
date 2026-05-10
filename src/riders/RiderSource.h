@@ -37,15 +37,14 @@ public:
             iterator(const RiderGrid *index, const std::vector<cell_id_t> *cells, size_t pos = 0)
                     : index_(index),
                       cells_(cells),
-                      cell_pos_(cells ? std::min(pos, cells->size()) : 0) {}
+                      cell_pos_(pos) {}
 
             const RiderGrid::rider_set_t &operator*() const {
                 return index_->riders_in_cell((*cells_)[cell_pos_]);
             }
 
             iterator &operator++() {
-                if (cell_pos_ < cells_->size())
-                    ++cell_pos_;
+                ++cell_pos_;
                 return *this;
             }
 

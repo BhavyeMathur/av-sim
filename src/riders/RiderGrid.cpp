@@ -51,12 +51,3 @@ void RiderGrid::update(rider_id_t rider_id) {
 
     rider_id_to_cell_[rider_id] = new_cell;
 }
-
-const RiderGrid::rider_set_t &RiderGrid::riders_in_cell(cell_id_t cell) const {
-    auto it = cell_to_riders_.find(cell);
-    if (it != cell_to_riders_.end())
-        return it->second;
-
-    static RiderGrid::rider_set_t s{};
-    return s;
-}

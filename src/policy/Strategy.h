@@ -43,19 +43,19 @@ protected:
     //  1. passenger capacity (pax)
     //  2. battery life
     template<bool check_pax = true>
-        [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &info) {
+        [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &cand) {
             if (rider.n_requests_assigned() >= 2)
                 return false;
 
-            info.fm_dist_km = sim::distance(rider.eta_pos(), request.pick_coord);
-            if (!sim::rider_battery.check_capacity(rider.id(), info.fm_dist_km + request.predicted_lm_dist))
-                return false;
-
             if constexpr (check_pax) {
-                info.pax = sim::rider_pax.capacity(rider.id());
-                if (info.pax < request.pax)
+                cand.pax = sim::rider_pax.capacity(rider.id());
+                if (cand.pax < request.pax)
                     return false;
             }
+
+            cand.fm_dist_km = sim::distance(rider.eta_pos(), request.pick_coord);
+            if (!sim::rider_battery.check_capacity(rider.id(), cand.fm_dist_km + request.predicted_lm_dist))
+                return false;
 
             return true;
         }
@@ -123,7 +123,7 @@ template<class Derived>
         }
 
         rider_id_t match(const Request &request) {
-            static_assert(sequential_strategy_v);
+             static_assert(sequential_strategy_v);
 
             // this is the data type of the iterable containing pools of candidate riders
             // for example, a sequential strategy might return a vector of sets of riders

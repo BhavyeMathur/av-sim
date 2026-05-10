@@ -9,7 +9,14 @@ public:
 
     explicit RiderGrid(size_t n_riders);
 
-    [[nodiscard]] const rider_set_t &riders_in_cell(cell_id_t cell) const;
+    [[nodiscard]] FORCE_INLINE const rider_set_t &riders_in_cell(cell_id_t cell) const {
+        auto it = cell_to_riders_.find(cell);
+        if (it != cell_to_riders_.end())
+            return it->second;
+
+        static RiderGrid::rider_set_t s{};
+        return s;
+    }
 
 private:
     void on_rider_updated_eta_pos(const RiderUpdatedETAPos &event);
