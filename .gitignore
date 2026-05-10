@@ -2,6 +2,7 @@ wandb/*
 build/*
 **/cache/*
 output/*
+pgo/*
 
 cmake-*/
 data/*

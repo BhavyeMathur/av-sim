@@ -1,6 +1,22 @@
 #include "BestPickupStrategy.h"
 
-bool BestPickupStrategy::is_better(BestPickupStrategy::RiderInfo &cand, const BestPickupStrategy::RiderInfo &best) {
+
+void BoundedH3BestPickupStrategy::assign_request(const Request &req) {
+    auto rider_id = match(req);
+    if (rider_id == INVALID_RIDER_ID)
+        return;
+
+    auto &rider = sim::riders[rider_id];
+    sim::events.trigger(RequestAssigned{req.id, rider.id()});
+
+    rider.push_waypoints(Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
+                         Waypoint{req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup},
+                         Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
+                         Waypoint{req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
+}
+
+bool BoundedH3BestPickupStrategy::is_better(BoundedH3BestPickupStrategy::RiderInfo &cand,
+                                            const BoundedH3BestPickupStrategy::RiderInfo &best) {
     if (cand.pax > best.pax)
         return false;
 
@@ -15,38 +31,52 @@ bool BestPickupStrategy::is_better(BestPickupStrategy::RiderInfo &cand, const Be
     return true;
 }
 
-Strategy::Action GreedyH3BestPickupStrategy::on_pool_end(const CellRidersSource::pool_t &,
-                                                         const GreedyH3BestPickupStrategy::RiderInfo &best,
-                                                         const Request &) {
-    return best.rider ? Strategy::Action::Break : Strategy::Action::None;
-}
+rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
+    // best rider candidate seen so far
+    RiderInfo best;
 
-Strategy::Action BoundedH3BestPickupStrategy::on_pool_start(const CellRidersSource::pool_t &pool,
-                                                            const BoundedH3BestPickupStrategy::RiderInfo &best,
-                                                            const Request &request) {
-    if (pool.empty())
-        return Strategy::Action::Skip;
-    if (best.rider == nullptr)
-        return Strategy::Action::None;
+    // iterate through a pool of riders in order of (pool) priority
+    // that is, earlier pools are encountered first and therefore the riders in them
+    // are given a higher priority of being matched.
+    // by customising the contents of different pools, various strategies can be implemented.
+    for (auto &pool: riders.candidate_pools(request)) {
+        if (pool.empty())
+            continue;
 
-    // in this strategy, each pool corresponds to a single H3 cell
-    // get the H3 cell of this pool from the first rider in it
-    // and calculate an approximate lower bound on the travel time
-    // skipping this pool if the lower bound leads to a worse pickup time
-    auto cell = sim::riders[*pool.begin()].eta_cell();
-    auto centroid = grid::cell_to_latlon(cell);
-    auto [_, tau] = approx_eta(centroid, request.pick_coord);
+        // pruning based on travel time bound
+        if (best.rider != nullptr) {
+            // in this strategy, each pool corresponds to a single H3 cell
+            // get the H3 cell of this pool from the first rider in it
+            // and calculate an approximate lower bound on the travel time
+            // skipping this pool if the lower bound leads to a worse pickup time
+            auto cell = sim::riders[*pool.begin()].eta_cell();
+            auto centroid = grid::cell_to_latlon(cell);
+            auto [_, tau] = approx_eta(centroid, request.pick_coord);
 
-    if (best.pickup_at < tau + sim::clock)
-        return Strategy::Action::Skip;
+            if (best.pickup_at < tau + sim::clock)
+                continue;
+        }
 
-    return Strategy::Action::None;
-}
+        // iterate through each rider in a pool, check its feasibility
+        // and find the best match using the is_better method which a strategy must provide
+        for (auto rider_id: pool) {
+            auto &rider = sim::riders[rider_id];
 
-Strategy::Action BoundedH3BestPickupStrategy::on_pool_end(const CellRidersSource::pool_t &,
-                                                          const BoundedH3BestPickupStrategy::RiderInfo &best,
-                                                          const Request &) {
-    if (best.rider and best.rider->state() == Rider::State::Idle)
-        return Strategy::Action::Break;
-    return Strategy::Action::None;
+            RiderInfo info;
+            info.rider = &rider;
+
+            if (!is_rider_feasible(rider, request, info))
+                continue;
+
+            if (is_better(info, best)) {
+                best = info;
+
+                // greedily accept an Idle rider
+                if (best.rider->state() == Rider::State::Idle)
+                    return best.rider->id();
+            }
+        }
+    }
+
+    return best.rider ? best.rider->id() : INVALID_RIDER_ID;
 }

@@ -101,14 +101,8 @@ void create_riders() {
 std::unique_ptr<Strategy> get_allocation_engine() {
     const auto &strategy = sim::configs.policy.matching;
 
-    if (strategy == "global")
-        return std::make_unique<GlobalBestPickupStrategy>();
-    else if (strategy == "greedy-h3")
-        return std::make_unique<GreedyH3BestPickupStrategy>();
-    else if (strategy == "bounded-h3")
+    if (strategy == "bounded-h3")
         return std::make_unique<BoundedH3BestPickupStrategy>();
-    else if (strategy == "ringed-h3")
-        return std::make_unique<RingedH3BestPickupStrategy>();
     else if (strategy == "vehicle-batching")
         return std::make_unique<VehicleBatching>();
 

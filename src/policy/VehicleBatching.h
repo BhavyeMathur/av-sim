@@ -3,10 +3,15 @@
 #include "Strategy.h"
 #include "BestPickupStrategy.h"
 
-class VehicleBatching : public Strategy,
-                        public BestPickupStrategy {
+class VehicleBatching : public Strategy {
 public:
-    using RiderInfo = BestPickupStrategy::RiderInfo;
+    struct RiderInfo : public Strategy::RiderInfo {
+        timestamp_t pickup_at = std::numeric_limits<timestamp_t>::max();
+
+        bool operator<(const RiderInfo &other) const { return pickup_at < other.pickup_at; }
+
+        bool operator>(const RiderInfo &other) const { return pickup_at > other.pickup_at; }
+    };
 
     void assign_request(const Request &request) override;
 

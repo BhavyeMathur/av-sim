@@ -5,10 +5,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE
-    "-Ofast -march=native -mtune=native -ffast-math -funroll-loops -fstrict-aliasing -DNDEBUG -fvectorize -fslp-vectorize -fno-strict-overflow -fno-math-errno -ffinite-math-only -fno-trapping-math -fassociative-math -freciprocal-math -fno-signed-zeros -fno-plt -pthread"
+    "-Ofast -march=native -mtune=native -ffast-math -funroll-loops -fstrict-aliasing -flto -DNDEBUG -fvectorize -fslp-vectorize -fomit-frame-pointer -finline-functions -fno-strict-overflow -fno-math-errno -ffinite-math-only -fno-trapping-math -fassociative-math -freciprocal-math -fno-signed-zeros -fno-plt -pthread"
 )
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Ofast -ffast-math -Wl,-Ofast")
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-Ofast -ffast-math -Wl,-Ofast")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto -Ofast -ffast-math -Wl,-Ofast")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-flto -Ofast -ffast-math -Wl,-Ofast")
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 
 message(STATUS "Release CXX flags: ${CMAKE_CXX_FLAGS_RELEASE}")
