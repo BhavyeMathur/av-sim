@@ -1,0 +1,18 @@
+sim:
+  region: "se-michigan"
+
+  length_s: 604800
+  requests_file:
+    template: data/requests/{sim.region}.parquet
+  riders_file:
+    template: "data/riders/{sim.region}-{fleet.fleet_size}.parquet"
+  h3_resolution: 8
+
+policy:
+  matching: bounded-h3
+  charging: in-place
+
+fleet:
+  fleet_size: 1000000
+  frac_2_seater: 0.0
+  frac_4_seater: 0.0
