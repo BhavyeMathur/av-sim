@@ -3,18 +3,17 @@
 #include "World.h"
 #include "io/Database.h"
 #include "io/SimulationConfigs.h"
+#include "events/EventBus.h"
 
 #include "util/misc.h"
 
 #include <iomanip>
 #include <iostream>
-#include <thread>
-#include <semaphore>
 #include <fstream>
-
 
 static std::string db_path = "runs/runs.sqlite3";
 
+mutable_radix_heap<Event, EventBus::_event_radix_key> EventBus::events_;
 
 namespace sim {
     SimulationConfigs configs;
@@ -70,40 +69,6 @@ int main(int argc, char *argv[]) {
         db.init_schema();
     }
 
-    // Profiling (single-thread)
     run(experiments[0]);
-    return 0;
-    // ------------------------
-
-    std::vector<std::thread> threads;
-    threads.reserve(experiments.size());
-
-    constexpr size_t max_concurrent = 8;
-    std::counting_semaphore<max_concurrent> sem(max_concurrent);
-
-    std::cout << "...running " << experiments.size()
-              << " experiments with up to " << max_concurrent
-              << " concurrent runs\n";
-
-    auto s = std::chrono::high_resolution_clock::now();
-
-    for (const auto &path: experiments) {
-        // we allow a maximum of max_concurrent threads
-        // and use a semaphore  to guarantee this
-        sem.acquire();
-
-        threads.emplace_back([&sem, path]() {
-            run(path);
-            sem.release();
-        });
-    }
-
-    for (auto &t: threads)
-        t.join();
-
-    auto e = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(e - s);
-
-    std::cout << "Elapsed time: " << duration.count() << " milliseconds\n\n";
     return 0;
 }

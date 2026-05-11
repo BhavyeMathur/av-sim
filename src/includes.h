@@ -43,6 +43,7 @@ namespace sim {
     extern timestamp_t clock;
 
     extern std::vector<Rider> riders;
+    extern size_t n_riders;
 }
 
 #if DEBUG

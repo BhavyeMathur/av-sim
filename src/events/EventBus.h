@@ -15,13 +15,13 @@ public:
             b = true;
     }
 
-    [[nodiscard]] bool empty() const { return events_.empty(); }
+    static bool empty() { return events_.empty(); }
 
-    [[nodiscard]] size_t size() const { return events_.size(); }
+    [[nodiscard]] static size_t size() { return events_.size(); }
 
-    Event pop() { return events_.pop(); }
+    static Event pop() { return events_.pop(); }
 
-    mutable_pq<Event>::key push(Event ev) { return events_.push(ev); }
+    static mutable_pq<Event>::key push(Event ev) { return events_.push(ev); }
 
     void trigger(EventPayload payload) { dispatch({last_t_, payload}); }
 
@@ -136,8 +136,7 @@ private:
         }
     };
 
-    // mutable_pq<Event> events_;
-    mutable_radix_heap<Event, _event_radix_key> events_;
+    static mutable_radix_heap<Event, _event_radix_key> events_;
 
     timestamp_t last_t_ = 0;
 };

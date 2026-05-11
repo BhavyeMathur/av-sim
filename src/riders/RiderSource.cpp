@@ -4,8 +4,8 @@
 
 
 AllRidersSource::AllRidersSource() {
-    rider_ids_[0].reserve(sim::riders.size());
-    for (size_t i = 0; i < sim::riders.size(); ++i)
+    rider_ids_[0].reserve(sim::n_riders);
+    for (size_t i = 0; i < sim::n_riders; ++i)
         rider_ids_[0].push_back(i);
 }
 

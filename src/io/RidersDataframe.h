@@ -5,17 +5,12 @@
 
 struct RidersDataFrame {
     struct Rider {
-        float lat, lon;
-        uint32_t created_at;
-        uint32_t lifetime;
-
-        uint32_t zone_id;
+        float lat;
+        float lon;
     };
 
     std::vector<float> lat;
     std::vector<float> lon;
-    std::vector<uint32_t> created_at;
-    std::vector<uint32_t> lifetime;
 
     explicit RidersDataFrame(const std::string &file);
 

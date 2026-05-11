@@ -9,7 +9,7 @@
 FleetStats::FleetStats()
         : _log_interval(sim::configs.stats.fleet_log_interval) {
 
-    _n_in_state[static_cast<uint8_t>(Rider::State::Idle)] = sim::riders.size();
+    _n_in_state[static_cast<uint8_t>(Rider::State::Idle)] = sim::n_riders;
 
     sim::events.on<&FleetStats::_on_rider_state_change>(*this);
     sim::events.on<&FleetStats::_on_sim_complete>(*this);

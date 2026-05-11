@@ -63,9 +63,7 @@ public:
     using State = _RiderState;
     using Step = RiderStep;
 
-    explicit Rider(coordinate initial_pos)
-            : id_(next_id_++),
-              pos_(initial_pos) {}
+    explicit Rider(coordinate initial_pos);
 
     [[nodiscard]] rider_id_t id() const { return id_; }
 
@@ -84,10 +82,6 @@ public:
     Step &next_waypoint() { return steps_.front(); }
 
     void assign_request();
-
-    void login();
-
-    void logout();
 
     void push_waypoint(Waypoint wp) { return push_waypoints(wp); }
 
@@ -141,7 +135,7 @@ private:
     // next completion scheduling guard
     bool next_scheduled_ = false;
 
-    State state_ = State::Dead;
+    State state_ = State::Idle;
 
     void schedule_next_();
 

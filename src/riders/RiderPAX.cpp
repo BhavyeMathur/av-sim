@@ -5,7 +5,7 @@
 
 
 void RiderPAX::init() {
-    rider_id_to_capacity_.resize(sim::riders.size());
+    rider_id_to_capacity_.resize(sim::n_riders);
 
     std::mt19937 rng(std::random_device{}());
     std::discrete_distribution<int> dist{
@@ -14,7 +14,7 @@ void RiderPAX::init() {
             sim::configs.fleet.frac_6_seater
     };
 
-    for (size_t i = 0; i < sim::riders.size(); i++) {
+    for (size_t i = 0; i < sim::n_riders; i++) {
         switch (dist(rng)) {
             case 0:
                 rider_id_to_capacity_[i] = 2;

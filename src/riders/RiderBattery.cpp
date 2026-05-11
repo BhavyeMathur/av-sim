@@ -7,7 +7,7 @@
 
 
 void RiderBattery::init() {
-    rider_id_to_state_.resize(sim::riders.size());
+    rider_id_to_state_.resize(sim::n_riders);
 
     if (sim::configs.policy.charging == "disable")
         return;

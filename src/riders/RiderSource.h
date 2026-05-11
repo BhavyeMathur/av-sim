@@ -20,7 +20,7 @@ private:
 class CellRidersSource {
 public:
     CellRidersSource(uint8_t max_radius = 3)
-            : index_(sim::riders.size()),
+            : index_(sim::n_riders),
               max_radius_(max_radius) {}
 
     class Range {

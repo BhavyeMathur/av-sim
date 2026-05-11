@@ -36,9 +36,6 @@ protected:
     //  2. battery life
     template<bool check_pax = true>
         [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &cand) {
-            if (rider.n_requests_assigned() >= 2)
-                return false;
-
             if constexpr (check_pax) {
                 cand.pax = sim::rider_pax.capacity(rider.id());
                 if (cand.pax < request.pax)

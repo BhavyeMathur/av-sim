@@ -14,6 +14,7 @@
 
 #include <pandas.h>
 #include <tqdm.h>
+#include <thread>
 
 
 namespace sim {
@@ -23,6 +24,7 @@ namespace sim {
 
     std::vector<Request> requests;
     std::vector<Rider> riders;
+    size_t n_riders = 0;
 
     RiderBattery rider_battery;
     RiderPAX rider_pax;
@@ -31,14 +33,6 @@ namespace sim {
 }
 
 void register_default_events() {
-    sim::events.on([](const RiderLogin &event) {
-        sim::riders[event.rider_id].login();
-    });
-
-    sim::events.on([](const RiderLogout &event) {
-        sim::riders[event.rider_id].logout();
-    });
-
     sim::events.on([](const RiderWaypoint &event) {
         debug("RiderWaypoint(rider_id=%i)\n", event.rider_id);
         sim::riders[event.rider_id].complete_waypoint();
@@ -79,22 +73,6 @@ void create_requests() {
 
         sim::requests.emplace_back(req);
         sim::events.push({req.created_at, RequestCreated{req.id}});
-    }
-}
-
-void create_riders() {
-    RidersDataFrame riders_df(sim::configs.sim.riders_file);
-    sim::riders.reserve(sim::riders.size());
-
-    for (const auto &r: riders_df) {
-        Rider rider(coordinate{static_cast<coordinate_t>(r.lat),
-                               static_cast<coordinate_t>(r.lon)});
-        sim::riders.emplace_back(rider);
-
-        sim::events.push({r.created_at, RiderLogin{rider.id()}});
-
-        // TODO remove if logoffs needed
-        // sim::events.push({r.created_at + r.lifetime, RiderLogout{rider.id()}});
     }
 }
 
@@ -190,7 +168,9 @@ void create_world() {
     register_default_events();
 
     create_requests();
-    create_riders();
+
+    RidersDataFrame riders_df(sim::configs.sim.riders_file);
+    sim::n_riders = riders_df.size();
 
     auto alloc_engine = get_allocation_engine();
     auto charging_policy = get_charging_policy();
@@ -201,6 +181,11 @@ void create_world() {
     sim::rider_battery.init();
     sim::rider_pax.init();
 
+    // create riders ----------------------
+    sim::riders.reserve(sim::n_riders);
+    for (const auto &r: riders_df)
+        sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(r.lat), static_cast<coordinate_t>(r.lon)});
+
     // ------------------
     sim::events.trigger(SimStart{});
 
@@ -208,21 +193,39 @@ void create_world() {
     unsigned int i = 0;
     tqdm::tqdm bar(100);
 
-    while (!sim::events.empty()) {
+    std::vector<std::thread> threads;
+
+    for (int k = 0; k < 0; k++) {
+        threads.emplace_back([]() {
+            auto events = sim::events;
+            while (!EventBus::empty()) {
+                Event event = EventBus::pop();
+                sim::clock = event.t;
+
+                events.dispatch(event);
+            }
+        });
+    }
+
+    while (!EventBus::empty()) {
+        Event event = EventBus::pop();
+
         if (i == 0) {
-            max_size = std::max(max_size, sim::events.size());
-            bar.update(100 - (100.0f * sim::events.size()) / max_size);
+            max_size = std::max(max_size, EventBus::size());
+            bar.update(100 - (100.0f * EventBus::size()) / max_size);
 
             i = 100000;
         }
         i--;
 
-        Event event = sim::events.pop();
         sim::clock = event.t;
         sim::events.dispatch(event);
     }
-    bar.complete();
 
+    for (auto &t: threads)
+        t.join();
+
+    bar.complete();
     sim::events.trigger(SimComplete{});
 
     save();

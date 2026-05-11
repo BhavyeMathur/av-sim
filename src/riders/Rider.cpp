@@ -5,20 +5,10 @@
 
 rider_id_t Rider::next_id_ = 0;
 
-void Rider::login() {
-    if (state_ != State::Dead)
-        throw std::runtime_error("rider already logged in");
-
-    state_ = State::Idle;
-    eta_at_ = last_commit_at_ = sim::clock;
+Rider::Rider(coordinate initial_pos)
+        : id_(next_id_++),
+          pos_(initial_pos) {
     update_eta_pos_(0, pos_);
-}
-
-void Rider::logout() {
-    if (state_ == State::Dead)
-        throw std::runtime_error("rider already logged out");
-
-    state_ = State::Dead;
 }
 
 void Rider::assign_request() {

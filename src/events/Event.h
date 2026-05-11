@@ -14,8 +14,6 @@ struct RequestPayload {
     request_id_t request_id;
 };
 
-struct RiderLogin : public RiderPayload {};
-struct RiderLogout : public RiderPayload {};
 struct RiderWaypoint : public RiderPayload {};
 
 struct RiderScheduleWaypoint {
@@ -68,8 +66,6 @@ using EventPayload = std::variant<
         SimStart,
         SimComplete,
 
-        RiderLogin,
-        RiderLogout,
         RiderScheduleWaypoint,
         RiderWaypoint,
         RiderStateChange,

@@ -11,8 +11,6 @@ RidersDataFrame::RidersDataFrame(const string &file) {
 
     lat = pd::column_as_vector<pd::float32>(riders, "lat");
     lon = pd::column_as_vector<pd::float32>(riders, "lon");
-    created_at = pd::column_as_vector<pd::uint32>(riders, "created_at");
-    lifetime = pd::column_as_vector<pd::uint32>(riders, "lifetime");
 }
 
 size_t RidersDataFrame::size() const {
@@ -31,8 +29,6 @@ RidersDataFrame::iterator::value_type RidersDataFrame::iterator::operator*() con
     return Rider{
             .lat=df->lat[index],
             .lon=df->lon[index],
-            .created_at=df->created_at[index],
-            .lifetime=df->lifetime[index],
     };
 }
 
