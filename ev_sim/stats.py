@@ -34,12 +34,19 @@ def load_results(run):
     output = pd.read_parquet(f"{output_dir}/requests.parquet")
     output = requests.merge(output, left_index=True, right_index=True, validate="1:1")
 
-    fleet_output = pd.read_parquet(f"{output_dir}/fleet.parquet")
-    fleet_output.set_index("timestamp", inplace=True)
-    fleet_output = fleet_output.add_prefix("n_")
+    try:
+        fleet_output = pd.read_parquet(f"{output_dir}/fleet.parquet")
+        fleet_output.set_index("timestamp", inplace=True)
+        fleet_output = fleet_output.add_prefix("n_")
+    except FileNotFoundError:
+        fleet_output = None
 
-    waypoints = pd.read_parquet(f"{output_dir}/waypoints.parquet")
-    vehicle_state_durations = compute_vehicle_state_durations(waypoints)
+    try:
+        waypoints = pd.read_parquet(f"{output_dir}/waypoints.parquet")
+        vehicle_state_durations = compute_vehicle_state_durations(waypoints)
+    except FileNotFoundError:
+        waypoints = None
+        vehicle_state_durations = None
 
     return output, fleet_output, waypoints, vehicle_state_durations
 
@@ -116,7 +123,8 @@ def compute_stats(run):
     requests, fleet_output, waypoints, vehicle_state_durations = load_results(run)
 
     stats = compute_request_statistics(requests)
-    stats.update(compute_rider_stats(waypoints, vehicle_state_durations))
+    if waypoints is not None:
+        stats.update(compute_rider_stats(waypoints, vehicle_state_durations))
 
     return stats
 
