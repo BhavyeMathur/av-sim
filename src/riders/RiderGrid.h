@@ -5,7 +5,14 @@
 
 class RiderGrid {
 public:
-    using rider_set_t = std::vector<rider_id_t>;
+    struct Pool {
+        std::vector<rider_id_t> riders{};
+        cell_id_t cell;
+
+        explicit Pool(cell_id_t cell) : cell(cell) {}
+    };
+
+    using rider_set_t = Pool;
 
     explicit RiderGrid(size_t n_riders);
 
@@ -14,7 +21,8 @@ public:
         if (it != cell_to_riders_.end())
             return it->second;
 
-        static RiderGrid::rider_set_t s{};
+        static RiderGrid::rider_set_t s{0};
+        s.cell = cell;
         return s;
     }
 

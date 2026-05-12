@@ -14,7 +14,6 @@
 
 #include <pandas.h>
 #include <tqdm.h>
-#include <thread>
 
 
 namespace sim {
@@ -189,23 +188,9 @@ void create_world() {
     // ------------------
     sim::events.trigger(SimStart{});
 
-    auto max_size = sim::events.size();
+    auto max_size = EventBus::size();
     unsigned int i = 0;
     tqdm::tqdm bar(100);
-
-    std::vector<std::thread> threads;
-
-    for (int k = 0; k < 0; k++) {
-        threads.emplace_back([]() {
-            auto events = sim::events;
-            while (!EventBus::empty()) {
-                Event event = EventBus::pop();
-                sim::clock = event.t;
-
-                events.dispatch(event);
-            }
-        });
-    }
 
     while (!EventBus::empty()) {
         Event event = EventBus::pop();
@@ -221,9 +206,6 @@ void create_world() {
         sim::clock = event.t;
         sim::events.dispatch(event);
     }
-
-    for (auto &t: threads)
-        t.join();
 
     bar.complete();
     sim::events.trigger(SimComplete{});

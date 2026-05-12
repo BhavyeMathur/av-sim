@@ -30,20 +30,20 @@ void RiderGrid::update(rider_id_t rider_id) {
         return;
 
     if (old_cell != INVALID_CELL_ID) {
-        auto &vec = cell_to_riders_.at(old_cell);
+        auto &vec = cell_to_riders_.at(old_cell).riders;
 
         uint32_t pos = rider_id_to_pos_[rider_id];
         rider_id_t moved = vec.back();
 
         vec[pos] = moved;
-        rider_id_to_pos_[moved] = pos;
-
         vec.pop_back();
-        rider_id_to_pos_[rider_id] = UINT32_MAX;
+
+        rider_id_to_pos_[moved] = pos;
     }
 
     if (new_cell != INVALID_CELL_ID) {
-        auto &vec = cell_to_riders_[new_cell];
+        auto [it, _] = cell_to_riders_.try_emplace(new_cell, new_cell);
+        auto &vec = it->second.riders;
 
         rider_id_to_pos_[rider_id] = static_cast<uint32_t>(vec.size());
         vec.push_back(rider_id);
