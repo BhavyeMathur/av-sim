@@ -6,9 +6,9 @@
 rider_id_t Rider::next_id_ = 0;
 
 Rider::Rider(coordinate initial_pos)
-        : id_(next_id_++),
-          pos_(initial_pos) {
-    update_eta_pos_(0, pos_);
+        : id_(next_id_++) {
+    sim::riders_data[id_].pos_ = initial_pos;
+    update_eta_pos_(0, initial_pos);
 }
 
 void Rider::assign_request() {
@@ -17,12 +17,12 @@ void Rider::assign_request() {
 }
 
 // schedule the next waypoint (if any) by pushing it to the global events queue
-void Rider::schedule_next_() {
+void Rider::schedule_next_(RiderData &data) {
     assert(!next_scheduled_ && "should not call schedule_next_() if event already scheduled");
 
     // if there are no more steps to take then mark ourselves as IDLE (or DEAD)
     // and return after setting next_scheduled_ = false;
-    if (steps_.empty()) {
+    if (data.steps_.empty()) {
         next_scheduled_ = false;
         set_state_if_not_dead_(State::Idle);
         return;
@@ -31,13 +31,13 @@ void Rider::schedule_next_() {
     // otherwise we calculate the completion time of the next waypoint
     // by adding dwell_time + actual_eta (movement time)
     // and push this to the global event queue
-    const auto &waypoint = steps_.front().waypoint;
+    const auto &waypoint = data.steps_.front().waypoint;
 
-    auto [distance, duration] = actual_eta(pos_, waypoint.pos);
+    auto [distance, duration] = actual_eta(data.pos_, waypoint.pos);
     duration += waypoint.dwell_s;
 
     sim::events.trigger(RiderScheduleWaypoint{id_, distance});
-    sim::events.push({sim::clock + duration, RiderWaypoint{id_}});
+    EventBus::push({sim::clock + duration, RiderWaypoint{id_}});
     next_scheduled_ = true;
 
     // perform action based on the type of the waypoint
@@ -78,8 +78,10 @@ void Rider::complete_waypoint() {
     debug("Rider::complete_waypoint(rider_id=%i)", id_);
     assert(!steps_.empty() && "no waypoints to complete");
 
-    auto waypoint = steps_.front().waypoint;
-    steps_.pop_front();
+    auto &data = sim::riders_data[id_];
+
+    auto waypoint = data.steps_.front().waypoint;
+    data.steps_.pop_front();
 
     // perform action based on the type of the waypoint
     // at the time when the waypoint is completed
@@ -105,29 +107,31 @@ void Rider::complete_waypoint() {
     }
 
     // update position and last commit at
-    pos_ = waypoint.pos;
-    last_commit_at_ = sim::clock;
+    data.pos_ = waypoint.pos;
+    data.last_commit_at_ = sim::clock;
 
     // recalculate the new ETA of all waypoints
     // knowing that this one was completed at 'now'
-    recalculate_eta_at_();
+    recalculate_eta_at_(data);
 
     // schedule the next waypoint
     next_scheduled_ = false;
-    schedule_next_();
+    schedule_next_(data);
 }
 
-void Rider::recalculate_eta_at_() {
-    auto final_waypoint_at = last_commit_at_;
-    for (auto &step: steps_)
+void Rider::recalculate_eta_at_(RiderData &data) {
+    auto final_waypoint_at = data.last_commit_at_;
+    for (auto &step: data.steps_)
         final_waypoint_at += step.duration();
 
     eta_at_ = final_waypoint_at;
 }
 
 void Rider::update_eta_pos_(distance_t d, coordinate c) {
+    auto &data = sim::riders_data[id_];
+
     eta_pos_ = c;
-    eta_cell_ = grid::latlon_to_cell(c);
+    data.eta_cell_ = grid::latlon_to_cell(c);
 
     sim::events.trigger(RiderUpdatedETAPos{id_, d});
 }

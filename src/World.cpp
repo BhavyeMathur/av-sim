@@ -22,7 +22,9 @@ namespace sim {
     timestamp_t clock = 0;
 
     std::vector<Request> requests;
+
     std::vector<Rider> riders;
+    std::vector<RiderData> riders_data;
     size_t n_riders = 0;
 
     RiderBattery rider_battery;
@@ -71,7 +73,7 @@ void create_requests() {
             break;
 
         sim::requests.emplace_back(req);
-        sim::events.push({req.created_at, RequestCreated{req.id}});
+        EventBus::push({req.created_at, RequestCreated{req.id}});
     }
 }
 
@@ -182,6 +184,7 @@ void create_world() {
 
     // create riders ----------------------
     sim::riders.reserve(sim::n_riders);
+    sim::riders_data.resize(sim::n_riders);
     for (const auto &r: riders_df)
         sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(r.lat), static_cast<coordinate_t>(r.lon)});
 

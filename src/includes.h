@@ -30,6 +30,8 @@ static constexpr auto INVALID_RIDER_ID = static_cast<rider_id_t>(-1);
 
 enum class _RiderState : uint8_t;
 
+class RiderData;
+
 class Rider;
 
 class Request;
@@ -43,6 +45,7 @@ namespace sim {
     extern timestamp_t clock;
 
     extern std::vector<Rider> riders;
+    extern std::vector<RiderData> riders_data;
     extern size_t n_riders;
 }
 
