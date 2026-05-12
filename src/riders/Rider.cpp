@@ -5,8 +5,8 @@
 
 rider_id_t Rider::next_id_ = 0;
 
-Rider::Rider(coordinate initial_pos)
-        : id_(next_id_++) {
+Rider::Rider(coordinate initial_pos, uint8_t pax)
+        : id_(next_id_++), capacity_(pax) {
     sim::riders_data[id_].pos_ = initial_pos;
     update_eta_pos_(0, initial_pos);
 }

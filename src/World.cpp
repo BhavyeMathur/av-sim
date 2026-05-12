@@ -14,6 +14,7 @@
 
 #include <pandas.h>
 #include <tqdm.h>
+#include <random>
 
 
 namespace sim {
@@ -28,7 +29,6 @@ namespace sim {
     size_t n_riders = 0;
 
     RiderBattery rider_battery;
-    RiderPAX rider_pax;
 
     float cos_ref_lat;
 }
@@ -180,13 +180,33 @@ void create_world() {
     RiderStats();
 
     sim::rider_battery.init();
-    sim::rider_pax.init();
 
     // create riders ----------------------
+    std::mt19937 rng(std::random_device{}());
+    std::discrete_distribution<int> dist{
+            sim::configs.fleet.frac_2_seater,
+            sim::configs.fleet.frac_4_seater,
+            sim::configs.fleet.frac_6_seater
+    };
+
     sim::riders.reserve(sim::n_riders);
     sim::riders_data.resize(sim::n_riders);
-    for (const auto &r: riders_df)
-        sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(r.lat), static_cast<coordinate_t>(r.lon)});
+    for (const auto &r: riders_df) {
+        uint8_t pax;
+        switch (dist(rng)) {
+            case 0:
+                pax = 2;
+                break;
+            case 1:
+                pax = 4;
+                break;
+            case 2:
+                pax = 6;
+                break;
+        }
+
+        sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(r.lat), static_cast<coordinate_t>(r.lon)}, pax);
+    }
 
     // ------------------
     sim::events.trigger(SimStart{});

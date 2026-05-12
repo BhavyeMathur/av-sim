@@ -73,11 +73,13 @@ public:
     using State = _RiderState;
     using Step = RiderStep;
 
-    explicit Rider(coordinate initial_pos);
+    explicit Rider(coordinate initial_pos, uint8_t pax);
 
     [[nodiscard]] rider_id_t id() const { return id_; }
 
     [[nodiscard]] uint8_t n_requests_assigned() const { return n_assigned_; }
+
+    [[nodiscard]] uint8_t capacity() const { return capacity_; }
 
     [[nodiscard]] coordinate pos() const { return sim::riders_data[id_].pos_; }
 
@@ -128,6 +130,7 @@ public:
 
 private:
     static rider_id_t next_id_;
+
     rider_id_t id_;
 
     coordinate eta_pos_{};
@@ -135,6 +138,7 @@ private:
 
     State state_ = State::Idle;
     uint8_t n_assigned_ = 0;
+    uint8_t capacity_;
 
     // next completion scheduling guard
     bool next_scheduled_ = false;

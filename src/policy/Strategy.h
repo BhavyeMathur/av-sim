@@ -4,16 +4,13 @@
 
 #include "Request.h"
 #include "riders/RiderBattery.h"
-#include "riders/RiderPAX.h"
 #include "riders/RiderSource.h"
 #include "routing/Distance.h"
 #include "events/EventBus.h"
 
 namespace sim {
     extern EventBus events;
-
     extern RiderBattery rider_battery;
-    extern RiderPAX rider_pax;
 }
 
 class Strategy {
@@ -37,7 +34,7 @@ protected:
     template<bool check_pax = true>
         [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &cand) {
             if constexpr (check_pax) {
-                cand.pax = sim::rider_pax.capacity(rider.id());
+                cand.pax = rider.capacity();
                 if (cand.pax < request.pax)
                     return false;
             }
