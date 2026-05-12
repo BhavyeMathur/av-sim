@@ -3,14 +3,12 @@
 #include "includes.h"
 
 #include "Request.h"
-#include "riders/RiderBattery.h"
 #include "riders/RiderSource.h"
 #include "routing/Distance.h"
 #include "events/EventBus.h"
 
 namespace sim {
     extern EventBus events;
-    extern RiderBattery rider_battery;
 }
 
 class Strategy {
@@ -40,7 +38,7 @@ protected:
             }
 
             cand.fm_dist_km = sim::distance(rider.eta_pos(), request.pick_coord);
-            if (!sim::rider_battery.check_capacity(rider.id(), cand.fm_dist_km + request.predicted_lm_dist))
+            if (!cand.rider->check_capacity(cand.fm_dist_km + request.predicted_lm_dist))
                 return false;
 
             return true;

@@ -59,17 +59,19 @@ private:
 
 
 class RiderData {
+    friend class Rider;
+
     ringbuffer<RiderStep> steps_;
     timestamp_t last_commit_at_ = 0;
 
     coordinate pos_;
     cell_id_t eta_cell_{};
-
-    friend class Rider;
 };
 
 class Rider {
 public:
+    friend class RiderBattery;
+
     using State = _RiderState;
     using Step = RiderStep;
 
@@ -81,6 +83,8 @@ public:
 
     [[nodiscard]] uint8_t capacity() const { return capacity_; }
 
+    [[nodiscard]] bool check_capacity(distance_t distance) const { return eta_range_ > distance; }
+
     [[nodiscard]] coordinate pos() const { return sim::riders_data[id_].pos_; }
 
     [[nodiscard]] coordinate eta_pos() const { return eta_pos_; }
@@ -91,7 +95,7 @@ public:
 
     [[nodiscard]] State state() { return state_; }
 
-    Step &next_waypoint() const { return sim::riders_data[id_].steps_.front(); }
+    [[nodiscard]] Step &next_waypoint() const { return sim::riders_data[id_].steps_.front(); }
 
     void assign_request();
 
@@ -126,9 +130,13 @@ public:
 
     void complete_waypoint();
 
+    void charge(coordinate at);
+
     static std::string state_to_string(State state);
 
 private:
+    static constexpr distance_t max_range_ = 0.8 * 300;  // 240 km
+    static constexpr duration_t charge_time_ = 3600;    // 1 hour
     static rider_id_t next_id_;
 
     rider_id_t id_;
@@ -136,12 +144,13 @@ private:
     coordinate eta_pos_{};
     timestamp_t eta_at_ = 0;
 
+    // charging/range related variables
+    distance_t eta_range_ = max_range_;
+
     State state_ = State::Idle;
     uint8_t n_assigned_ = 0;
     uint8_t capacity_;
-
-    // next completion scheduling guard
-    bool next_scheduled_ = false;
+    bool next_scheduled_ = false;  // next completion scheduling guard
 
     void schedule_next_(RiderData &data);
 

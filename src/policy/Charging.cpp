@@ -12,12 +12,9 @@ ChargingPolicy::ChargingPolicy() {
 void ChargeInPlace::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
     static constexpr distance_t minimum_ = 0.2 * 300;   // 60 km
 
-    auto &state = sim::rider_battery.state(e.rider_id);
-    if (state.eta_range_ > minimum_)
-        return;
-
     auto &rider = sim::riders[e.rider_id];
-    sim::rider_battery.charge(rider, rider.eta_pos());
+    if (!rider.check_capacity(minimum_))
+        rider.charge(rider.eta_pos());
 }
 
 ChargeAtHub::ChargeAtHub() {
@@ -35,11 +32,10 @@ ChargeAtHub::ChargeAtHub() {
 void ChargeAtHub::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
     static constexpr distance_t minimum_ = 0.2 * 300;   // 60 km
 
-    auto &state = sim::rider_battery.state(e.rider_id);
-    if (state.eta_range_ > minimum_)
+    auto &rider = sim::riders[e.rider_id];
+    if (rider.check_capacity(minimum_))
         return;
 
-    auto &rider = sim::riders[e.rider_id];
     duration_t best_time = std::numeric_limits<duration_t>::max();
     coordinate best_hub{};
 
@@ -52,5 +48,5 @@ void ChargeAtHub::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
         }
     }
 
-    sim::rider_battery.charge(rider, best_hub);
+    rider.charge(best_hub);
 }

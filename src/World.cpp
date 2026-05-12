@@ -28,8 +28,6 @@ namespace sim {
     std::vector<RiderData> riders_data;
     size_t n_riders = 0;
 
-    RiderBattery rider_battery;
-
     float cos_ref_lat;
 }
 
@@ -178,8 +176,6 @@ void create_world() {
 
     FleetStats();
     RiderStats();
-
-    sim::rider_battery.init();
 
     // create riders ----------------------
     std::mt19937 rng(std::random_device{}());
