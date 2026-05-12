@@ -15,7 +15,7 @@ private:
 
     void assign_request(const Request &req) override;
 
-    rider_id_t match(const Request &request);
+    RiderInfo match(const Request &request);
 
     static bool is_better(RiderInfo &cand, const RiderInfo &best);
 };

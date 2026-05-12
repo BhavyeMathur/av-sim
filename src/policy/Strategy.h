@@ -24,6 +24,7 @@ public:
         Rider *rider = nullptr;
         uint8_t pax = std::numeric_limits<uint8_t>::max();
         distance_t fm_dist_km = std::numeric_limits<distance_t>::max();
+        unique_spinlock lck;
     };
 
     Strategy();
@@ -36,6 +37,9 @@ protected:
     //  2. battery life
     template<bool check_pax = true>
         [[nodiscard]] static bool is_rider_feasible(const Rider &rider, const Request &request, RiderInfo &cand) {
+            if (rider.n_requests_assigned() >= 2)
+                return false;
+
             if constexpr (check_pax) {
                 cand.pax = sim::rider_pax.capacity(rider.id());
                 if (cand.pax < request.pax)

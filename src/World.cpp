@@ -16,14 +16,18 @@
 #include <tqdm.h>
 #include <thread>
 
+mutable_pq<Event> EventBus::events_;
+// mutable_radix_heap<Event, EventBus::_event_radix_key> EventBus::events_;
 
 namespace sim {
     EventBus events;
+    spinlock event_lock;
 
-    timestamp_t clock = 0;
-
+    thread_local timestamp_t clock = 0;
     std::vector<Request> requests;
+
     std::vector<Rider> riders;
+    std::vector<spinlock> rider_mutexes;
     size_t n_riders = 0;
 
     RiderBattery rider_battery;
@@ -72,7 +76,7 @@ void create_requests() {
             break;
 
         sim::requests.emplace_back(req);
-        sim::events.push({req.created_at, RequestCreated{req.id}});
+        EventBus::push({req.created_at, RequestCreated{req.id}});
     }
 }
 
@@ -175,44 +179,61 @@ void create_world() {
     auto alloc_engine = get_allocation_engine();
     auto charging_policy = get_charging_policy();
 
-    FleetStats();
-    RiderStats();
+//    FleetStats();
+//    RiderStats();
 
     sim::rider_battery.init();
     sim::rider_pax.init();
 
     // create riders ----------------------
     sim::riders.reserve(sim::n_riders);
+    sim::rider_mutexes.resize(sim::n_riders);
+
     for (const auto &r: riders_df)
         sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(r.lat), static_cast<coordinate_t>(r.lon)});
 
     // ------------------
     sim::events.trigger(SimStart{});
 
-    auto max_size = sim::events.size();
+    auto max_size = EventBus::size();
     unsigned int i = 0;
     tqdm::tqdm bar(100);
 
     std::vector<std::thread> threads;
 
-    for (int k = 0; k < 0; k++) {
+    for (int k = 0; k < 2; k++) {
         threads.emplace_back([]() {
             auto events = sim::events;
-            while (!EventBus::empty()) {
-                Event event = EventBus::pop();
-                sim::clock = event.t;
+            Event event;
+
+            while (true) {
+                {
+                    unique_spinlock lock(sim::event_lock);
+                    if (EventBus::empty())
+                        break;
+                    event = EventBus::pop();
+                }
 
                 events.dispatch(event);
             }
         });
     }
 
-    while (!EventBus::empty()) {
-        Event event = EventBus::pop();
+    Event event;
+    size_t size;
+
+    while (true) {
+        {
+            unique_spinlock lock(sim::event_lock);
+            if (EventBus::empty())
+                break;
+            event = EventBus::pop();
+            size = EventBus::size();
+        }
 
         if (i == 0) {
-            max_size = std::max(max_size, EventBus::size());
-            bar.update(100 - (100.0f * EventBus::size()) / max_size);
+            max_size = std::max(max_size, size);
+            bar.update(100 - (100.0f * size) / max_size);
 
             i = 100000;
         }

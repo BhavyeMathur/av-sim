@@ -10,6 +10,7 @@
 
 namespace sim {
     extern EventBus events;
+    extern spinlock event_lock;
 
     extern RiderBattery rider_battery;
     extern RiderPAX rider_pax;

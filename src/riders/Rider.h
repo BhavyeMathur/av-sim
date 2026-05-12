@@ -1,10 +1,11 @@
 #pragma once
 
 #include "includes.h"
+#include "routing/Routing.h"
+
 #include <coordinate.h>
 #include <ringbuffer.h>
-
-#include "routing/Routing.h"
+#include <mutex>
 
 
 struct Waypoint {
@@ -88,6 +89,8 @@ public:
     template<typename... W> requires (std::same_as<std::decay_t<W>, Waypoint> && ...)
 
     void push_waypoints(W &&... wp) {
+        assert(!sim::rider_mutexes[id_].try_lock());
+
         static_assert(sizeof...(W) > 0);
         distance_t total_distance = 0;
         coordinate last_pos = eta_pos_;

@@ -12,6 +12,7 @@ Rider::Rider(coordinate initial_pos)
 }
 
 void Rider::assign_request() {
+    assert(!sim::rider_mutexes[id_].try_lock());
     n_assigned_++;
     assert(n_assigned_ <= 2 && "rider can be assigned a maximum of two requests at a time");
 }
@@ -37,7 +38,12 @@ void Rider::schedule_next_() {
     duration += waypoint.dwell_s;
 
     sim::events.trigger(RiderScheduleWaypoint{id_, distance});
-    sim::events.push({sim::clock + duration, RiderWaypoint{id_}});
+
+    {
+        unique_spinlock lock(sim::event_lock);
+        EventBus::push({sim::clock + duration, RiderWaypoint{id_}});
+    }
+
     next_scheduled_ = true;
 
     // perform action based on the type of the waypoint
@@ -77,6 +83,8 @@ void Rider::schedule_next_() {
 void Rider::complete_waypoint() {
     debug("Rider::complete_waypoint(rider_id=%i)", id_);
     assert(!steps_.empty() && "no waypoints to complete");
+
+    unique_spinlock lock(sim::rider_mutexes[id_]);
 
     auto waypoint = steps_.front().waypoint;
     steps_.pop_front();

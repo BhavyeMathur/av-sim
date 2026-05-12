@@ -19,7 +19,7 @@ private:
 
 class CellRidersSource {
 public:
-    CellRidersSource(uint8_t max_radius = 3)
+    explicit CellRidersSource(uint8_t max_radius = 3)
             : index_(sim::n_riders),
               max_radius_(max_radius) {}
 
@@ -40,7 +40,8 @@ public:
                       cell_pos_(pos) {}
 
             const RiderGrid::rider_set_t &operator*() const {
-                return index_->riders_in_cell((*cells_)[cell_pos_]);
+                auto cell = (*cells_)[cell_pos_];
+                return index_->riders_in_cell(cell);
             }
 
             iterator &operator++() {
@@ -77,6 +78,8 @@ public:
     using pool_t = Range::iterator::value_type;
 
     [[nodiscard]] Range candidate_pools(const Request &req) const;
+
+    spinlock &get_lock(cell_id_t cell) { return index_.get_lock(cell); }
 
 private:
     RiderGrid index_;

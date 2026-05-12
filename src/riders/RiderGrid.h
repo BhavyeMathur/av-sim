@@ -5,7 +5,12 @@
 
 class RiderGrid {
 public:
-    using rider_set_t = std::vector<rider_id_t>;
+    struct Pool {
+        std::vector<rider_id_t> riders;
+        cell_id_t cell;
+    };
+
+    using rider_set_t = Pool;
 
     explicit RiderGrid(size_t n_riders);
 
@@ -16,6 +21,11 @@ public:
 
         static RiderGrid::rider_set_t s{};
         return s;
+    }
+
+    spinlock &get_lock(cell_id_t cell) {
+        unique_spinlock lock(lck_);
+        return cell_locks_[cell];
     }
 
 private:
@@ -29,5 +39,10 @@ private:
     std::vector<cell_id_t> rider_id_to_cell_;
     std::vector<uint32_t> rider_id_to_pos_;
 
-    absl::flat_hash_map<cell_id_t, rider_set_t> cell_to_riders_;
+    std::unordered_map<cell_id_t, rider_set_t> cell_to_riders_;
+    // absl::flat_hash_map<cell_id_t, rider_set_t> cell_to_riders_;
+
+    spinlock lck_;
+    mutable std::unordered_map<cell_id_t, spinlock> cell_locks_;
+    // mutable absl::flat_hash_map<cell_id_t, spinlock> cell_locks_;
 };

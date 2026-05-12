@@ -14,6 +14,8 @@ inline int32_t rect_j(cell_id_t id) noexcept {
     return static_cast<int32_t>(id & 0xffffffffu) - grid_bias;
 }
 
+spinlock cache_lock;
+
 namespace grid::rect {
     double cell_lon_rad = 0;
 
@@ -33,7 +35,12 @@ namespace grid::rect {
     const std::vector<cell_id_t> &cells_in_increasing_radius(cell_id_t origin, int max_radius) {
         assert(max_radius >= 0 && "max_radius must be >= 0");
 
+        cache_lock.lock();
         auto &entry = neighbor_cell_cache_[origin];
+        cache_lock.unlock();
+
+        // TODO we should be able to precompute this!
+        unique_spinlock lock(entry.lock);
 
         if (entry.computed_radius < 0) {
             entry.computed_radius = 0;

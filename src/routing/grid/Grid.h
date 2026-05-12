@@ -40,7 +40,9 @@ namespace grid {
     struct NeighborCellCacheEntry {
         int computed_radius = -1;
         std::vector<cell_id_t> cells;
+        spinlock lock;
     };
 
-    extern absl::flat_hash_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
+    extern std::unordered_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
+    // extern absl::flat_hash_map<cell_id_t, NeighborCellCacheEntry> neighbor_cell_cache_;
 }

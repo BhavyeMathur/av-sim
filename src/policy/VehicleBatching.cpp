@@ -14,19 +14,18 @@ void VehicleBatching::assign_request(const Request &req) {
     };
 
     for (auto &pool: candidate_pools(req)) {
-        if (pool.empty())
+        if (pool.riders.empty())
             continue;
 
         // bounded H3 strategy
-        auto h3_cell = sim::riders[*pool.begin()].eta_cell();
-        auto h3_centroid = grid::cell_to_latlon(h3_cell);
+        auto h3_centroid = grid::cell_to_latlon(pool.cell);
         auto [_, tau] = approx_eta(h3_centroid, req.pick_coord);
 
         if (nbest >= need and worst_vehicle()->pickup_at < tau + sim::clock)
             continue;
         // bounded H3 strategy
 
-        for (auto rider_id: pool) {
+        for (auto rider_id: pool.riders) {
             auto &rider = sim::riders[rider_id];
 
             RiderInfo cand;
@@ -40,11 +39,11 @@ void VehicleBatching::assign_request(const Request &req) {
             cand.pickup_at = fm_start_at + fm_time_s;
 
             if (nbest < need)
-                best[nbest++] = cand;
+                best[nbest++] = std::move(cand);
             else {
                 auto worst = worst_vehicle();
                 if (cand.pickup_at < worst->pickup_at)
-                    *worst = cand;
+                    *worst = std::move(cand);
             }
         }
     }

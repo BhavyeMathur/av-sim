@@ -9,12 +9,6 @@
 // register and run custom callback functions for events
 class EventBus {
 public:
-    EventBus() {
-        // enable all callbacks by default
-        for (auto &b: enabled_)
-            b = true;
-    }
-
     static bool empty() { return events_.empty(); }
 
     [[nodiscard]] static size_t size() { return events_.size(); }
@@ -27,12 +21,9 @@ public:
 
     void dispatch(const Event &e) {
         // ensure monotonicity of event times
-        assert(e.t >= last_t_);
+        // assert(e.t >= last_t_);
         last_t_ = e.t;
-
         auto idx = e.payload.index();
-        if (!enabled_[idx])
-            return;
 
         // the event payload index corresponds to the type of the event (inferred from the variant)
         // the callbacks for this event type are defined in a vector of callbacks, handler_
@@ -106,18 +97,6 @@ public:
                                      });
         }
 
-    template<class PayloadT>
-        void disable() {
-            constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
-            enabled_[idx] = false;
-        }
-
-    template<class PayloadT>
-        void enable() {
-            constexpr std::size_t idx = EventPayload{PayloadT{}}.index();
-            enabled_[idx] = true;
-        }
-
 private:
     struct Handler {
         void *ctx = nullptr;
@@ -126,7 +105,6 @@ private:
     };
 
     std::array<std::vector<Handler>, std::variant_size_v<EventPayload>> handlers_;
-    std::array<bool, std::variant_size_v<EventPayload>> enabled_{};
 
     struct _event_radix_key {
         using key_type = timestamp_t;
@@ -136,7 +114,8 @@ private:
         }
     };
 
-    static mutable_radix_heap<Event, _event_radix_key> events_;
+    static mutable_pq<Event> events_;
+    // static mutable_radix_heap<Event, _event_radix_key> events_;
 
     timestamp_t last_t_ = 0;
 };

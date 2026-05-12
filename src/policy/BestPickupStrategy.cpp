@@ -2,13 +2,14 @@
 
 
 void BoundedH3BestPickupStrategy::assign_request(const Request &req) {
-    auto rider_id = match(req);
-    if (rider_id == INVALID_RIDER_ID)
+    auto best = match(req);
+    if (!best.rider)
         return;
 
-    auto &rider = sim::riders[rider_id];
-    sim::events.trigger(RequestAssigned{req.id, rider.id()});
+    auto rider_id = best.rider->id();
+    sim::events.trigger(RequestAssigned{req.id, rider_id});
 
+    auto &rider = sim::riders[rider_id];
     rider.push_waypoints(Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
                          Waypoint{req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup},
                          Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
@@ -31,7 +32,7 @@ bool BoundedH3BestPickupStrategy::is_better(BoundedH3BestPickupStrategy::RiderIn
     return true;
 }
 
-rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
+BoundedH3BestPickupStrategy::RiderInfo BoundedH3BestPickupStrategy::match(const Request &request) {
     // best rider candidate seen so far
     RiderInfo best;
 
@@ -40,7 +41,8 @@ rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
     // are given a higher priority of being matched.
     // by customising the contents of different pools, various strategies can be implemented.
     for (auto &pool: riders.candidate_pools(request)) {
-        if (pool.empty())
+        unique_spinlock lock(riders.get_lock(pool.cell));
+        if (pool.riders.empty())
             continue;
 
         // pruning based on travel time bound
@@ -49,8 +51,7 @@ rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
             // get the H3 cell of this pool from the first rider in it
             // and calculate an approximate lower bound on the travel time
             // skipping this pool if the lower bound leads to a worse pickup time
-            auto cell = sim::riders[*pool.begin()].eta_cell();
-            auto centroid = grid::cell_to_latlon(cell);
+            auto centroid = grid::cell_to_latlon(pool.cell);
             auto [_, tau] = approx_eta(centroid, request.pick_coord);
 
             if (best.pickup_at < tau + sim::clock)
@@ -59,24 +60,24 @@ rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
 
         // iterate through each rider in a pool, check its feasibility
         // and find the best match using the is_better method which a strategy must provide
-        for (auto rider_id: pool) {
-            auto &rider = sim::riders[rider_id];
-
+        for (auto rider_id: pool.riders) {
             RiderInfo info;
-            info.rider = &rider;
-
-            if (!is_rider_feasible(rider, request, info))
+            info.lck = unique_spinlock::try_acquire(sim::rider_mutexes[rider_id]);
+            if (!info.lck.owns_lock())
                 continue;
 
-            if (is_better(info, best)) {
-                best = info;
+            auto &rider = sim::riders[rider_id];
+            info.rider = &rider;
+
+            if (is_rider_feasible(rider, request, info) and is_better(info, best)) {
+                best = std::move(info);
 
                 // greedily accept an Idle rider
                 if (best.rider->state() == Rider::State::Idle)
-                    return best.rider->id();
+                    return best;
             }
         }
     }
 
-    return best.rider ? best.rider->id() : INVALID_RIDER_ID;
+    return best;
 }

@@ -9,6 +9,7 @@ public:
     struct State {
         distance_t eta_range_ = capacity_;
         distance_t range_ = capacity_;
+        bool charging_scheduled_ = false;
     };
 
     void init();

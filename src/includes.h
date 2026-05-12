@@ -36,18 +36,25 @@ class Request;
 
 #include "events/Event.h"
 #include "io/SimulationConfigs.h"
+#include "util/lock.h"
 
 namespace sim {
     extern SimulationConfigs configs;
 
-    extern timestamp_t clock;
+    extern thread_local timestamp_t clock;
 
     extern std::vector<Rider> riders;
+    extern std::vector<spinlock> rider_mutexes;
     extern size_t n_riders;
 }
 
 #if DEBUG
-#define debug(...) printf(__VA_ARGS__)
+#define debug(...) \
+    do { \
+        printf("[thread %zu] ", std::hash<std::thread::id>{}(std::this_thread::get_id())); \
+        printf(__VA_ARGS__); \
+        fflush(stdout); \
+    } while (false)
 #else
 #define debug(...) do {} while (0)
 #endif
