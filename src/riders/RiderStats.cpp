@@ -1,5 +1,9 @@
 #include "RiderStats.h"
-#include "extern.h"
+
+#include "Rider.h"
+#include "RiderManager.h"
+#include "events/EventBus.h"
+#include "io/SimulationConfigs.h"
 
 #include <pandas.h>
 
@@ -10,12 +14,13 @@ RiderStats::RiderStats() {
 }
 
 void RiderStats::on_rider_waypoint_(const RiderWaypoint &e) {
-    auto &rider = sim::riders[e.rider_id];
+    auto &rider = sim::riders.get_rider(e.rider_id);
+    auto &data = sim::riders.get_data(e.rider_id);
     rider_id_.push_back(e.rider_id);
     timestamp_.push_back(sim::clock);
 
-    lat_.push_back(rider.pos().lat);
-    lon_.push_back(rider.pos().lon);
+    lat_.push_back(data.pos().lat);
+    lon_.push_back(data.pos().lon);
     state_.push_back(static_cast<uint8_t>(rider.state()));
 }
 

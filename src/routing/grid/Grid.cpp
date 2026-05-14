@@ -1,4 +1,5 @@
 #include "Grid.h"
+#include "io/SimulationConfigs.h"
 
 namespace sim {
     extern float cos_ref_lat;

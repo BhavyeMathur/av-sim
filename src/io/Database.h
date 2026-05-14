@@ -3,8 +3,7 @@
 #include <string>
 #include <sqlite3.h>
 
-#include "SimulationConfigs.h"
-
+struct SimulationConfigs;
 
 class Database {
 public:

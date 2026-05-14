@@ -1,15 +1,16 @@
 #define DEBUG false
 
 #include "FleetStats.h"
-#include "extern.h"
+#include "events/EventBus.h"
+#include "riders/RiderManager.h"
+#include "io/SimulationConfigs.h"
 
 #include <pandas.h>
 
 
-FleetStats::FleetStats()
-        : _log_interval(sim::configs.stats.fleet_log_interval) {
+FleetStats::FleetStats() : _log_interval(sim::configs.stats.fleet_log_interval) {
 
-    _n_in_state[static_cast<uint8_t>(Rider::State::Idle)] = sim::n_riders;
+    _n_in_state[static_cast<uint8_t>(RiderState::Idle)] = sim::riders.size();
 
     sim::events.on<&FleetStats::_on_rider_state_change>(*this);
     sim::events.on<&FleetStats::_on_sim_complete>(*this);
@@ -23,7 +24,7 @@ void FleetStats::_log() {
     _timestamps.push_back(sim::clock);
 
     #pragma unroll
-    for (uint8_t i = 0; i < static_cast<uint8_t>(Rider::State::SIZE); i++)
+    for (uint8_t i = 0; i < static_cast<uint8_t>(RiderState::SIZE); i++)
         _n_in_state_vs_t[i].push_back(_n_in_state[i]);
 }
 
@@ -41,13 +42,13 @@ void FleetStats::_on_sim_complete(const SimComplete &) {
     printf("...saving fleet statistics (count=%zu)\n", _timestamps.size());
 
     std::vector<pd::AnyColumn> cols;
-    cols.reserve(1 + static_cast<uint8_t>(Rider::State::SIZE));
+    cols.reserve(1 + static_cast<uint8_t>(RiderState::SIZE));
 
     cols.push_back(pd::col("timestamp", _timestamps));
 
-    for (uint8_t i = 0; i < static_cast<uint8_t>(Rider::State::SIZE); ++i)
+    for (uint8_t i = 0; i < static_cast<uint8_t>(RiderState::SIZE); ++i)
         cols.push_back(pd::col(
-                Rider::state_to_string(static_cast<Rider::State>(i)),
+                Rider::state_to_string(static_cast<RiderState>(i)),
                 _n_in_state_vs_t[i]
         ));
 

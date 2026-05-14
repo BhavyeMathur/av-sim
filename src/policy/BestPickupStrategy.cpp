@@ -1,18 +1,20 @@
 #include "BestPickupStrategy.h"
+#include "events/EventBus.h"
+#include "riders/RiderManager.h"
+#include "routing/grid/Grid.h"
 
 
 void BoundedH3BestPickupStrategy::assign_request(const Request &req) {
-    auto rider_id = match(req);
-    if (rider_id == INVALID_RIDER_ID)
+    auto rider = match(req);
+    if (!rider)
         return;
 
-    auto &rider = sim::riders[rider_id];
-    sim::events.trigger(RequestAssigned{req.id, rider.id()});
-
-    rider.push_waypoints(Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
-                         Waypoint{req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup},
-                         Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
-                         Waypoint{req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
+    sim::events.trigger(RequestAssigned{req.id, rider->id()});
+    sim::riders.push_waypoints(*rider,
+                               Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
+                               Waypoint{req.pick_coord, 120, req.id, Waypoint::Kind::WaitForPickup},
+                               Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
+                               Waypoint{req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
 }
 
 bool BoundedH3BestPickupStrategy::is_better(BoundedH3BestPickupStrategy::RiderInfo &cand,
@@ -31,7 +33,7 @@ bool BoundedH3BestPickupStrategy::is_better(BoundedH3BestPickupStrategy::RiderIn
     return true;
 }
 
-rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
+Rider *BoundedH3BestPickupStrategy::match(const Request &request) {
     // best rider candidate seen so far
     RiderInfo best;
 
@@ -39,7 +41,7 @@ rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
     // that is, earlier pools are encountered first and therefore the riders in them
     // are given a higher priority of being matched.
     // by customising the contents of different pools, various strategies can be implemented.
-    for (auto &pool: riders.candidate_pools(request)) {
+    for (RiderPool &pool: riders.candidate_pools(request)) {
         if (pool.riders.empty())
             continue;
 
@@ -58,9 +60,7 @@ rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
 
         // iterate through each rider in a pool, check its feasibility
         // and find the best match using the is_better method which a strategy must provide
-        for (auto rider_id: pool.riders) {
-            auto &rider = sim::riders[rider_id];
-
+        for (auto &rider: pool.riders) {
             RiderInfo info;
             info.rider = &rider;
 
@@ -68,14 +68,14 @@ rider_id_t BoundedH3BestPickupStrategy::match(const Request &request) {
                 continue;
 
             if (is_better(info, best)) {
-                best = info;
-
                 // greedily accept an Idle rider
-                if (best.rider->state() == Rider::State::Idle)
-                    return best.rider->id();
+                if (rider.state() == RiderState::Idle)
+                    return &rider;
+
+                best = info;
             }
         }
     }
 
-    return best.rider ? best.rider->id() : INVALID_RIDER_ID;
+    return best.rider;
 }

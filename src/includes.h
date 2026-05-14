@@ -28,25 +28,24 @@ static constexpr auto INVALID_CELL_ID = static_cast<cell_id_t >(-1);
 static constexpr auto INVALID_REQ_ID = static_cast<request_id_t>(-1);
 static constexpr auto INVALID_RIDER_ID = static_cast<rider_id_t>(-1);
 
-enum class _RiderState : uint8_t;
-
 class RiderData;
 
-class Rider;
+class RiderManager;
 
 class Request;
 
-#include "events/Event.h"
-#include "io/SimulationConfigs.h"
+class EventBus;
+
+struct SimulationConfigs;
 
 namespace sim {
+    extern timestamp_t clock;
     extern SimulationConfigs configs;
 
-    extern timestamp_t clock;
+    extern EventBus events;
+    extern std::vector<Request> requests;
 
-    extern std::vector<Rider> riders;
-    extern std::vector<RiderData> riders_data;
-    extern size_t n_riders;
+    extern RiderManager riders;
 }
 
 #if DEBUG

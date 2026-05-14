@@ -1,15 +1,11 @@
 #pragma once
 
 #include "includes.h"
-
 #include "Request.h"
-#include "riders/RiderSource.h"
+#include "riders/Rider.h"
 #include "routing/Distance.h"
-#include "events/EventBus.h"
 
-namespace sim {
-    extern EventBus events;
-}
+struct RequestCreated;
 
 class Strategy {
 public:
@@ -38,7 +34,7 @@ protected:
             }
 
             cand.fm_dist_km = sim::distance(rider.eta_pos(), request.pick_coord);
-            if (!cand.rider->check_capacity(cand.fm_dist_km + request.predicted_lm_dist))
+            if (rider.eta_range() <= cand.fm_dist_km + request.predicted_lm_dist)
                 return false;
 
             return true;

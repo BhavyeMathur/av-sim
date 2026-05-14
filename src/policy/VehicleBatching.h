@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Strategy.h"
-#include "BestPickupStrategy.h"
+#include "riders/RiderIterator.h"
 
 class VehicleBatching : public Strategy {
 public:
@@ -15,8 +15,8 @@ public:
 
     void assign_request(const Request &request) override;
 
-    [[nodiscard]] auto candidate_pools(const Request &request) const { return riders.candidate_pools(request); }
+    [[nodiscard]] auto candidate_pools(const Request &request) { return riders.candidate_pools(request); }
 
 private:
-    CellRidersSource riders;
+    RidersIterator riders;
 };

@@ -1,5 +1,5 @@
 #include "Strategy.h"
-#include "extern.h"
+#include "events/EventBus.h"
 
 
 Strategy::Strategy() {

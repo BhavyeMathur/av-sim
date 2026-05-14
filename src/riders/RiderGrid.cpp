@@ -1,53 +1,72 @@
 #include "RiderGrid.h"
-#include "extern.h"
+
+#include "Request.h"
+#include "Rider.h"
+#include "events/EventBus.h"
+#include "events/EventLock.h"
+#include "routing/grid/Grid.h"
 
 
-RiderGrid::RiderGrid(size_t n_riders)
-        : rider_id_to_cell_(n_riders, INVALID_CELL_ID),
-          rider_id_to_pos_(n_riders, UINT32_MAX) {
-    sim::events.on<&RiderGrid::on_rider_updated_eta_pos>(*this);
+RiderGrid::RiderGrid(size_t n_riders) {
+    cell_to_riders_.emplace(INVALID_CELL_ID, INVALID_CELL_ID);
+
+    rider_id_to_cell_.reserve(n_riders);
+    rider_id_to_idx_.reserve(n_riders);
+
     sim::events.on<&RiderGrid::on_request_completed>(*this);
 }
 
-void RiderGrid::on_rider_updated_eta_pos(const RiderUpdatedETAPos &event) {
-    update(event.rider_id);
+RiderPool &RiderGrid::riders_in_cell(cell_id_t cell) {
+    auto [it, _] = const_cast<RiderGrid *>(this)->cell_to_riders_.try_emplace(cell, cell);
+    return it->second;
+}
+
+Rider &RiderGrid::get_rider(rider_id_t rider_id) {
+    auto cell = rider_id_to_cell_[rider_id];
+    auto idx = rider_id_to_idx_[rider_id];
+    return cell_to_riders_.at(cell).riders[idx];
+}
+
+void RiderGrid::emplace(rider_id_t id, coordinate pos, uint8_t pax) {
+    auto cell = grid::latlon_to_cell(pos);
+    auto &vec = cell_to_riders_[cell].riders;
+
+    rider_id_to_cell_[id] = cell;
+    rider_id_to_idx_[id] = vec.size();
+    vec.emplace_back(id, pos, pax);
 }
 
 void RiderGrid::on_request_completed(const RequestCompleted &event) {
-    update(sim::requests[event.request_id].assigned_rider());
+//    sim::events.trigger(RiderUpdatedETAPos{id_, d});
 }
 
-void RiderGrid::update(rider_id_t rider_id) {
-    auto &rider = sim::riders[rider_id];
+Rider &RiderGrid::update(Rider &rider) {
+    auto rider_id = rider.id();
+    auto new_cell = grid::latlon_to_cell(rider.eta_pos());
 
-    auto new_cell = rider.eta_cell();
     auto old_cell = rider_id_to_cell_[rider_id];
+    auto old_idx = rider_id_to_idx_[rider_id];
+    auto &old_pool = cell_to_riders_.at(old_cell);
 
     if (rider.n_requests_assigned() >= 2)
         new_cell = INVALID_CELL_ID;
 
     if (old_cell == new_cell)
-        return;
+        return rider;
 
-    if (old_cell != INVALID_CELL_ID) {
-        auto &vec = cell_to_riders_.at(old_cell).riders;
+    auto [it, _] = cell_to_riders_.try_emplace(new_cell, new_cell);
+    auto &new_pool = it->second;
+    rider_id_to_idx_[rider_id] = new_pool.riders.size();
+    new_pool.riders.push_back(rider);
 
-        uint32_t pos = rider_id_to_pos_[rider_id];
-        rider_id_t moved = vec.back();
-
-        vec[pos] = moved;
-        vec.pop_back();
-
-        rider_id_to_pos_[moved] = pos;
+    if (old_idx != old_pool.riders.size() - 1) {
+        auto &moved = old_pool.riders.back();
+        auto moved_id = moved.id();
+        old_pool.riders[old_idx] = moved;
+        rider_id_to_idx_[moved_id] = old_idx;
     }
-
-    if (new_cell != INVALID_CELL_ID) {
-        auto [it, _] = cell_to_riders_.try_emplace(new_cell, new_cell);
-        auto &vec = it->second.riders;
-
-        rider_id_to_pos_[rider_id] = static_cast<uint32_t>(vec.size());
-        vec.push_back(rider_id);
-    }
+    old_pool.riders.pop_back();
 
     rider_id_to_cell_[rider_id] = new_cell;
+    return new_pool.riders.back();
 }

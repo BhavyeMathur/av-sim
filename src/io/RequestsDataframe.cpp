@@ -1,4 +1,5 @@
 #include "RequestsDataframe.h"
+#include "Request.h"
 
 #include <pandas.h>
 

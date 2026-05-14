@@ -2,6 +2,8 @@
 
 #include "includes.h"
 
+struct RiderUpdatedETAPos;
+
 class ChargingPolicy {
 public:
     ChargingPolicy();

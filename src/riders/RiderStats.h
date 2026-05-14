@@ -2,6 +2,10 @@
 
 #include "includes.h"
 
+struct RiderWaypoint;
+
+struct SimComplete;
+
 class RiderStats {
 public:
     RiderStats();

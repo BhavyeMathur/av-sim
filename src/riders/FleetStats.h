@@ -1,7 +1,11 @@
 #pragma once
 
 #include "includes.h"
-#include "Rider.h"
+#include "RiderData.h"
+
+struct RiderStateChange;
+
+struct SimComplete;
 
 
 class FleetStats {
@@ -10,10 +14,10 @@ public:
 
 private:
     // statistics
-    std::array<uint32_t, static_cast<size_t>(Rider::State::SIZE)> _n_in_state = {0};
+    std::array<uint32_t, static_cast<size_t>(RiderState::SIZE)> _n_in_state = {0};
 
     std::vector<timestamp_t> _timestamps;
-    std::array<std::vector<uint32_t>, static_cast<size_t>(Rider::State::SIZE)> _n_in_state_vs_t;
+    std::array<std::vector<uint32_t>, static_cast<size_t>(RiderState::SIZE)> _n_in_state_vs_t;
 
     // logging
     duration_t _log_interval;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "includes.h"
-#include <coordinate.h>
 
 
 class Request {

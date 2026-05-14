@@ -26,6 +26,9 @@ struct SimulationConfigs {
         double frac_4_seater = 0.0;
         double frac_6_seater = 0.0;
         int fleet_size = 0;
+
+        float max_range = 0.8 * 300;    // 240 km
+        uint32_t charge_time = 3600;    // 1 hour
     };
 
     struct Stats {

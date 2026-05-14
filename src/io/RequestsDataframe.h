@@ -1,9 +1,6 @@
 #pragma once
 
 #include "includes.h"
-#include <coordinate.h>
-
-#include "Request.h"
 
 
 struct RequestsDataFrame {

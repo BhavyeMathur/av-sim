@@ -1,17 +1,15 @@
 #define DEBUG false
 
-#include "extern.h"
-#include "routing/grid/Grid.h"
-#include "events/EventLock.h"
+#include "Rider.h"
+#include "RiderManager.h"
+#include "io/SimulationConfigs.h"
 
 
-rider_id_t Rider::next_id_ = 0;
-
-Rider::Rider(coordinate initial_pos, uint8_t pax)
-        : id_(next_id_++), capacity_(pax) {
-    sim::riders_data[id_].pos_ = initial_pos;
-    update_eta_pos_(0, initial_pos);
-}
+Rider::Rider(rider_id_t id, coordinate pos, uint8_t pax)
+        : id_(id),
+          eta_pos_(pos),
+          eta_range_(sim::configs.fleet.max_range),
+          capacity_(pax) {}
 
 void Rider::assign_request() {
     n_assigned_++;
@@ -29,7 +27,7 @@ void Rider::schedule_next_(RiderData &data) {
     // and return after setting next_scheduled_ = false;
     if (steps_.empty()) {
         next_scheduled_ = false;
-        set_state_if_not_dead_(State::Idle);
+        set_state_if_not_dead_(RiderState::Idle);
         return;
     }
 
@@ -49,28 +47,28 @@ void Rider::schedule_next_(RiderData &data) {
     // at the time when the waypoint is scheduled
     switch (waypoint.kind) {
         case Waypoint::Kind::FirstMile:
-            set_state_if_not_dead_(State::FirstMile);
+            set_state_if_not_dead_(RiderState::FirstMile);
             sim::events.trigger(FirstMileStart{waypoint.request_id, distance});
             break;
 
         case Waypoint::Kind::WaitForPickup:
-            set_state_if_not_dead_(State::PickingUp);
+            set_state_if_not_dead_(RiderState::PickingUp);
             sim::events.trigger(ArrivedAtPickup{waypoint.request_id});
             break;
 
         case Waypoint::Kind::LastMile:
-            set_state_if_not_dead_(State::LastMile);
+            set_state_if_not_dead_(RiderState::LastMile);
             sim::events.trigger(LastMileStart{waypoint.request_id, distance});
             break;
 
         case Waypoint::Kind::WaitForDropoff:
-            set_state_if_not_dead_(State::DroppingOff);
+            set_state_if_not_dead_(RiderState::DroppingOff);
             sim::events.trigger(ArrivedAtDrop{waypoint.request_id});
             break;
 
         case Waypoint::Kind::ChargeStart:
         case Waypoint::Kind::ChargeDone:
-            set_state_if_not_dead_(State::Charging);
+            set_state_if_not_dead_(RiderState::Charging);
             break;
 
         default:
@@ -83,7 +81,7 @@ void Rider::complete_waypoint() {
     debug("Rider::complete_waypoint(rider_id=%i)", id_);
     assert(!steps_.empty() && "no waypoints to complete");
 
-    auto &data = sim::riders_data[id_];
+    auto &data = sim::riders.get_data(id_);
     auto &steps_ = data.steps_;
     auto &pos_ = data.pos_;
     auto &last_commit_at_ = data.last_commit_at_;
@@ -127,21 +125,6 @@ void Rider::complete_waypoint() {
     schedule_next_(data);
 }
 
-void Rider::charge(coordinate at) {
-    EventLock<RiderUpdatedETAPos> lock;
-
-    auto [distance, _] = approx_eta(eta_pos_, at);
-    eta_range_ -= distance;
-
-    auto approx_charge_time = static_cast<duration_t>(charge_time_ * (eta_range_ / Rider::max_range_));
-
-    // go to charging location
-    push_waypoints(Waypoint{at, 0, INVALID_REQ_ID, Waypoint::Kind::ChargeStart},
-                   Waypoint{at, approx_charge_time, INVALID_REQ_ID, Waypoint::Kind::ChargeDone});
-
-    eta_range_ = Rider::max_range_;  // we will be back to full capacity once charging is complete
-}
-
 void Rider::recalculate_eta_at_(RiderData &data) {
     auto final_waypoint_at = data.last_commit_at_;
     for (auto &step: data.steps_)
@@ -150,48 +133,36 @@ void Rider::recalculate_eta_at_(RiderData &data) {
     eta_at_ = final_waypoint_at;
 }
 
-void Rider::update_eta_pos_(distance_t d, coordinate c) {
-    assert(eta_range_ >= d);
-
-    auto &data = sim::riders_data[id_];
-
-    eta_pos_ = c;
-    eta_range_ -= d;
-    data.eta_cell_ = grid::latlon_to_cell(c);
-
-    sim::events.trigger(RiderUpdatedETAPos{id_, d});
-}
-
-void Rider::set_state_if_not_dead_(State state) {
-    if (state_ == State::Dead)
+void Rider::set_state_if_not_dead_(RiderState state) {
+    if (state_ == RiderState::Dead)
         return;
 
     sim::events.trigger(RiderStateChange{id_, state_, state});
     state_ = state;
 }
 
-std::string Rider::state_to_string(Rider::State state) {
+std::string Rider::state_to_string(RiderState state) {
     switch (state) {
-        case State::Dead:
+        case RiderState::Dead:
             return "dead";
-        case State::Idle:
+        case RiderState::Idle:
             return "idle";
 
-        case State::FirstMile:
+        case RiderState::FirstMile:
             return "fm";
-        case State::PickingUp:
+        case RiderState::PickingUp:
             return "wait";
-        case State::LastMile:
+        case RiderState::LastMile:
             return "lm";
-        case State::DroppingOff:
+        case RiderState::DroppingOff:
             return "drop";
 
-        case State::Repositioning:
+        case RiderState::Repositioning:
             return "service";
-        case State::Charging:
+        case RiderState::Charging:
             return "charge";
 
-        case State::SIZE:
+        case RiderState::SIZE:
             throw std::invalid_argument("invalid state");
     }
 }

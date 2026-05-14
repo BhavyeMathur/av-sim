@@ -1,10 +1,10 @@
 #include "World.h"
 
-#include "extern.h"
-
 #include "io/RequestsDataframe.h"
 #include "io/RidersDataframe.h"
+#include "io/SimulationConfigs.h"
 
+#include "riders/RiderManager.h"
 #include "riders/FleetStats.h"
 #include "riders/RiderStats.h"
 
@@ -12,21 +12,20 @@
 #include "policy/VehicleBatching.h"
 #include "policy/Charging.h"
 
+#include "events/EventBus.h"
+#include "routing/grid/Grid.h"
+
 #include <pandas.h>
 #include <tqdm.h>
-#include <random>
 
+mutable_radix_heap<Event, EventBus::_event_radix_key> EventBus::events_;
 
 namespace sim {
-    EventBus events;
-
     timestamp_t clock = 0;
 
+    EventBus events;
     std::vector<Request> requests;
-
-    std::vector<Rider> riders;
-    std::vector<RiderData> riders_data;
-    size_t n_riders = 0;
+    RiderManager riders;
 
     float cos_ref_lat;
 }
@@ -34,11 +33,11 @@ namespace sim {
 void register_default_events() {
     sim::events.on([](const RiderWaypoint &event) {
         debug("RiderWaypoint(rider_id=%i)\n", event.rider_id);
-        sim::riders[event.rider_id].complete_waypoint();
+        sim::riders.get_rider(event.rider_id).complete_waypoint();
     });
 
     sim::events.on([](const RequestAssigned &event) {
-        sim::riders[event.rider_id].assign_request();
+        sim::riders.get_rider(event.rider_id).assign_request();
         sim::requests[event.request_id].assign_to(event.rider_id);
     });
 
@@ -169,40 +168,13 @@ void create_world() {
     create_requests();
 
     RidersDataFrame riders_df(sim::configs.sim.riders_file);
-    sim::n_riders = riders_df.size();
+    sim::riders = RiderManager(riders_df);
 
     auto alloc_engine = get_allocation_engine();
     auto charging_policy = get_charging_policy();
 
     FleetStats();
     RiderStats();
-
-    // create riders ----------------------
-    std::mt19937 rng(std::random_device{}());
-    std::discrete_distribution<int> dist{
-            sim::configs.fleet.frac_2_seater,
-            sim::configs.fleet.frac_4_seater,
-            sim::configs.fleet.frac_6_seater
-    };
-
-    sim::riders.reserve(sim::n_riders);
-    sim::riders_data.resize(sim::n_riders);
-    for (const auto &r: riders_df) {
-        uint8_t pax;
-        switch (dist(rng)) {
-            case 0:
-                pax = 2;
-                break;
-            case 1:
-                pax = 4;
-                break;
-            case 2:
-                pax = 6;
-                break;
-        }
-
-        sim::riders.emplace_back(coordinate{static_cast<coordinate_t>(r.lat), static_cast<coordinate_t>(r.lon)}, pax);
-    }
 
     // ------------------
     sim::events.trigger(SimStart{});

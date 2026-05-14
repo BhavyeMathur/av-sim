@@ -3,7 +3,6 @@
 #include "World.h"
 #include "io/Database.h"
 #include "io/SimulationConfigs.h"
-#include "events/EventBus.h"
 
 #include "util/misc.h"
 
@@ -12,8 +11,6 @@
 #include <fstream>
 
 static std::string db_path = "runs/runs.sqlite3";
-
-mutable_radix_heap<Event, EventBus::_event_radix_key> EventBus::events_;
 
 namespace sim {
     SimulationConfigs configs;

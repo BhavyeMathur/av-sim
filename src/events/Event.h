@@ -3,6 +3,8 @@
 #include "includes.h"
 #include <variant>
 
+enum class RiderState : uint8_t;
+
 struct SimStart {};
 struct SimComplete {};
 
@@ -28,8 +30,8 @@ struct RiderUpdatedETAPos {
 
 struct RiderStateChange {
     rider_id_t rider_id;
-    _RiderState old_state;
-    _RiderState new_state;
+    RiderState old_state;
+    RiderState new_state;
 };
 
 struct RiderChargeComplete {

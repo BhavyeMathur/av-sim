@@ -1,4 +1,6 @@
 #include "Grid.h"
+#include "io/SimulationConfigs.h"
+
 #include "h3api.h"
 
 struct H3CellCacheEntry {

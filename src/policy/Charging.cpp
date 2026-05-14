@@ -1,7 +1,8 @@
 #include "Charging.h"
-
 #include "riders/Rider.h"
-#include "extern.h"
+#include "riders/RiderManager.h"
+#include "events/EventBus.h"
+#include "io/SimulationConfigs.h"
 
 #include <pandas.h>
 
@@ -12,9 +13,9 @@ ChargingPolicy::ChargingPolicy() {
 void ChargeInPlace::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
     static constexpr distance_t minimum_ = 0.2 * 300;   // 60 km
 
-    auto &rider = sim::riders[e.rider_id];
-    if (!rider.check_capacity(minimum_))
-        rider.charge(rider.eta_pos());
+    auto &rider = sim::riders.get_rider(e.rider_id);
+    if (rider.eta_range() <= minimum_)
+        sim::riders.charge(rider, rider.eta_pos());
 }
 
 ChargeAtHub::ChargeAtHub() {
@@ -32,8 +33,8 @@ ChargeAtHub::ChargeAtHub() {
 void ChargeAtHub::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
     static constexpr distance_t minimum_ = 0.2 * 300;   // 60 km
 
-    auto &rider = sim::riders[e.rider_id];
-    if (rider.check_capacity(minimum_))
+    auto &rider = sim::riders.get_rider(e.rider_id);
+    if (rider.eta_range() > minimum_)
         return;
 
     duration_t best_time = std::numeric_limits<duration_t>::max();
@@ -48,5 +49,5 @@ void ChargeAtHub::on_rider_updated_eta_pos(const RiderUpdatedETAPos &e) {
         }
     }
 
-    rider.charge(best_hub);
+    sim::riders.charge(rider, best_hub);
 }

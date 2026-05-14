@@ -1,4 +1,7 @@
 #include "VehicleBatching.h"
+#include "events/EventBus.h"
+#include "riders/RiderManager.h"
+#include "routing/grid/Grid.h"
 
 
 void VehicleBatching::assign_request(const Request &req) {
@@ -13,7 +16,7 @@ void VehicleBatching::assign_request(const Request &req) {
         return std::max_element(best.begin(), best.begin() + nbest);
     };
 
-    for (auto &pool: candidate_pools(req)) {
+    for (RiderPool &pool: candidate_pools(req)) {
         if (pool.riders.empty())
             continue;
 
@@ -25,8 +28,7 @@ void VehicleBatching::assign_request(const Request &req) {
             continue;
         // bounded H3 strategy
 
-        for (auto rider_id: pool.riders) {
-            auto &rider = sim::riders[rider_id];
+        for (auto &rider: pool.riders) {
 
             RiderInfo cand;
             cand.rider = &rider;
@@ -63,9 +65,10 @@ void VehicleBatching::assign_request(const Request &req) {
         auto dwell_s = pickup_at - rider_info.pickup_at;
 
         sim::events.trigger(RequestAssigned{req.id, rider->id()});
-        rider->push_waypoints(Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
-                              Waypoint{req.pick_coord, 120 + dwell_s, req.id, Waypoint::Kind::WaitForPickup},
-                              Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
-                              Waypoint{req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
+        sim::riders.push_waypoints(*rider,
+                                   Waypoint{req.pick_coord, 0, req.id, Waypoint::Kind::FirstMile},
+                                   Waypoint{req.pick_coord, 120 + dwell_s, req.id, Waypoint::Kind::WaitForPickup},
+                                   Waypoint{req.drop_coord, 0, req.id, Waypoint::Kind::LastMile},
+                                   Waypoint{req.drop_coord, 120, req.id, Waypoint::Kind::WaitForDropoff});
     }
 }
