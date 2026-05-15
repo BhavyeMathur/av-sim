@@ -3,14 +3,19 @@
 #include "World.h"
 #include "io/Database.h"
 #include "io/SimulationConfigs.h"
+#include "events/EventBus.h"
 
 #include "util/misc.h"
 
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
+#include <sys/wait.h>
 
 static std::string db_path = "runs/runs.sqlite3";
+
+mutable_radix_heap<Event, EventBus::_event_radix_key> EventBus::events_;
 
 namespace sim {
     SimulationConfigs configs;
@@ -66,6 +71,46 @@ int main(int argc, char *argv[]) {
         db.init_schema();
     }
 
-    run(experiments[0]);
+    constexpr size_t MAX_PROCS = 8;
+
+    std::vector<pid_t> pids;
+    size_t next = 0;
+    size_t alive = 0;
+
+    auto wait_one = [&]() {
+        int status = 0;
+        pid_t pid = wait(&status);
+
+        if (pid < 0) {
+            perror("wait");
+            exit(1);
+        }
+
+        alive--;
+    };
+
+    while (next < experiments.size()) {
+        while (alive >= MAX_PROCS)
+            wait_one();
+
+        pid_t pid = fork();
+
+        if (pid < 0) {
+            perror("fork");
+            exit(1);
+        }
+
+        if (pid == 0) {
+            run(experiments[next]);
+            exit(0);
+        }
+
+        alive++;
+        next++;
+    }
+
+    while (alive > 0)
+        wait_one();
+
     return 0;
 }

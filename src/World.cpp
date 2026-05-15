@@ -190,7 +190,7 @@ void create_world() {
             max_size = std::max(max_size, EventBus::size());
             bar.update(100 - (100.0f * EventBus::size()) / max_size);
 
-            i = 100000;
+            i = 1000000;
         }
         i--;
 
