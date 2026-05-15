@@ -5,15 +5,17 @@
 
 
 void VehicleBatching::assign_request(const Request &req) {
-    constexpr
-    uint8_t MAX_BATCH = 3;
+    constexpr uint8_t MAX_BATCH = 3;
     const uint8_t need = (req.pax + 1) / 2;
 
     std::array<RiderInfo, MAX_BATCH> best;
     uint8_t nbest = 0;
 
     auto worst_vehicle = [&]() {
-        return std::max_element(best.begin(), best.begin() + nbest);
+        return std::max_element(best.begin(), best.begin() + nbest,
+                                [](const RiderInfo &a, const RiderInfo &b) {
+                                    return a.pickup_at < b.pickup_at;
+                                });
     };
 
     for (RiderPool &pool: candidate_pools(req)) {
@@ -21,11 +23,13 @@ void VehicleBatching::assign_request(const Request &req) {
             continue;
 
         // bounded H3 strategy
-        auto centroid = grid::cell_to_latlon(pool.cell);
-        auto [_, tau] = approx_eta(centroid, req.pick_coord);
+        if (nbest >= need) {
+            auto centroid = grid::cell_to_latlon(pool.cell);
+            auto [_, tau] = approx_eta(centroid, req.pick_coord);
 
-        if (nbest >= need and worst_vehicle()->pickup_at < tau + sim::clock)
-            continue;
+            if (worst_vehicle()->pickup_at < tau + sim::clock)
+                continue;
+        }
         // bounded H3 strategy
 
         for (auto &rider: pool.riders) {
@@ -38,8 +42,9 @@ void VehicleBatching::assign_request(const Request &req) {
 
             auto fm_start_at = std::max(rider.eta_at(), sim::clock);
             auto fm_time_s = static_cast<duration_t>(cand.fm_dist_km / speed_kmps);
-            cand.pickup_at = fm_start_at + fm_time_s;
+            auto arrive_pickup_at = fm_start_at + fm_time_s;
 
+            cand.pickup_at = arrive_pickup_at + 120;
             if (nbest < need)
                 best[nbest++] = cand;
             else {
@@ -47,6 +52,10 @@ void VehicleBatching::assign_request(const Request &req) {
                 if (cand.pickup_at < worst->pickup_at)
                     *worst = cand;
             }
+
+            // Greedy accept only once the whole batch is full.
+            if (nbest == need && worst_vehicle()->rider->state() == RiderState::Idle)
+                goto ret;
         }
     }
 
@@ -54,13 +63,14 @@ void VehicleBatching::assign_request(const Request &req) {
         return;
     assert(nbest == need);
 
-    auto slowest_rider = worst_vehicle();
-    auto pickup_at = slowest_rider->pickup_at;
+    ret:
+    auto slowest = worst_vehicle();
+    auto pickup_at = slowest->pickup_at;
 
     #pragma unroll
     for (uint8_t i = 0; i < need; i++) {
         auto &rider_info = best[i];
-        auto rider = rider_info.rider;
+        auto *rider = rider_info.rider;
 
         auto dwell_s = pickup_at - rider_info.pickup_at;
 
