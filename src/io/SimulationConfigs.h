@@ -19,6 +19,8 @@ struct SimulationConfigs {
 
         std::string charging;
         std::string charging_hubs;
+
+        uint32_t max_response_time;
     };
 
     struct Fleet {

@@ -92,6 +92,8 @@ SimulationConfigs load_config(const std::string &yaml_path) {
     cfg.policy.matching = require_scalar<std::string>(policy_node, "matching");
     cfg.policy.charging = optional_scalar<std::string>(policy_node, "charging", "disable");
     cfg.policy.charging_hubs = optional_scalar<std::string>(policy_node, "charging_hubs", "");
+    cfg.policy.max_response_time = optional_scalar<uint32_t>(policy_node, "max_response_time_s",
+                                                             std::numeric_limits<uint32_t>::max());
 
     cfg.fleet.frac_2_seater = require_scalar<double>(fleet_node, "frac_2_seater");
     cfg.fleet.frac_4_seater = require_scalar<double>(fleet_node, "frac_4_seater");

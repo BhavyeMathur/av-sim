@@ -10,6 +10,7 @@ sim:
 
 policy:
   matching: bounded-h3
+  max_response_time_s: 900  # 15 minutes
   charging: in-place
 
 fleet:

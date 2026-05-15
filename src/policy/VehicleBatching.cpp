@@ -2,6 +2,7 @@
 #include "events/EventBus.h"
 #include "riders/RiderManager.h"
 #include "routing/grid/Grid.h"
+#include "io/SimulationConfigs.h"
 
 
 void VehicleBatching::assign_request(const Request &req) {
@@ -43,6 +44,9 @@ void VehicleBatching::assign_request(const Request &req) {
             auto fm_start_at = std::max(rider.eta_at(), sim::clock);
             auto fm_time_s = static_cast<duration_t>(cand.fm_dist_km / speed_kmps);
             auto arrive_pickup_at = fm_start_at + fm_time_s;
+
+            if (arrive_pickup_at >= sim::clock + sim::configs.policy.max_response_time)
+                continue;
 
             cand.pickup_at = arrive_pickup_at + 120;
             if (nbest < need)

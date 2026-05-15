@@ -2,6 +2,7 @@
 #include "events/EventBus.h"
 #include "riders/RiderManager.h"
 #include "routing/grid/Grid.h"
+#include "io/SimulationConfigs.h"
 
 
 void BoundedH3BestPickupStrategy::assign_request(const Request &req) {
@@ -25,9 +26,12 @@ bool BoundedH3BestPickupStrategy::is_better(BoundedH3BestPickupStrategy::RiderIn
     auto fm_start_at = std::max(cand.rider->eta_at(), sim::clock);
     auto fm_time_s = static_cast<duration_t>(cand.fm_dist_km / speed_kmps);
     auto arrive_pickup_at = fm_start_at + fm_time_s;
-    cand.pickup_at = arrive_pickup_at + 120;
 
+    cand.pickup_at = arrive_pickup_at + 120;
     if (cand.pickup_at > best.pickup_at and cand.pax == best.pax)
+        return false;
+
+    if (arrive_pickup_at >= sim::clock + sim::configs.policy.max_response_time)
         return false;
 
     return true;

@@ -1,12 +1,16 @@
 sim:
+  region: "ann-arbor"
+
   length_s: 604800
-  requests_file: data/requests/ann-arbor.parquet
+  requests_file:
+    template: data/requests/{sim.region}.parquet
   riders_file:
-    template: "data/riders/ann-arbor-{fleet.fleet_size}.parquet"
+    template: "data/riders/{sim.region}-{fleet.fleet_size}.parquet"
   h3_resolution: 7
 
 policy:
   matching: vehicle-batching
+  max_response_time_s: 900  # 15 minutes
 
   charging: hubs
   n_hubs: 2
@@ -15,6 +19,7 @@ policy:
 
 fleet:
   fleet_size:
-    values: [ 30000, 35000, 40000, 50000 ]
+    values: [ 5000, 7500, 9000, 10000, 10500, 11000, 11500, 12000, 12500, 13000, 13500, 14000, 14500, 15000, 17500,
+              20000, 21000, 22000, 23000, 24000, 25000, 30000, 30000, 35000, 40000, 50000 ]
   frac_2_seater: 1.0
   frac_4_seater: 0.0

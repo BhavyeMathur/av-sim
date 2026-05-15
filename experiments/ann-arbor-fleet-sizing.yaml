@@ -10,6 +10,7 @@ sim:
 
 policy:
   matching: bounded-h3
+  max_response_time_s: 900  # 15 minutes
 
   charging: hubs
   n_hubs: 2
@@ -18,6 +19,6 @@ policy:
 
 fleet:
   fleet_size:
-    values: [ 11000, 12000, 13000, 14000, 15000, 17500, 20000, 25000 ]
+    values: [ 5000, 7500, 9000, 10000, 10500, 11000, 11500, 12000, 12500, 13000, 13500, 14000, 14500, 15000, 17500, 20000, 25000, 30000 ]
   frac_2_seater: 0.0
   frac_4_seater: 0.0
