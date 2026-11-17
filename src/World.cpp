@@ -34,6 +34,9 @@ void register_default_events() {
     sim::events.on([](const RiderWaypoint &event) {
         debug("RiderWaypoint(rider_id=%i)\n", event.rider_id);
         sim::riders.get_rider(event.rider_id).complete_waypoint();
+        // Completion can free a vehicle's second queued-request slot. Reindex
+        // after its method returns, because moving pools invalidates references.
+        sim::riders.update_grid(event.rider_id);
     });
 
     sim::events.on([](const RequestAssigned &event) {
@@ -173,8 +176,8 @@ void create_world() {
     auto alloc_engine = get_allocation_engine();
     auto charging_policy = get_charging_policy();
 
-    FleetStats();
-    RiderStats();
+    FleetStats fleet_stats;
+    RiderStats rider_stats;
 
     // ------------------
     sim::events.trigger(SimStart{});
