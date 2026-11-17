@@ -1,5 +1,9 @@
 #define DEBUG false
 
+#include <vector>
+#include <string>
+#include <stdexcept>
+#include <cstdlib>
 #include "World.h"
 #include "io/Database.h"
 #include "io/SimulationConfigs.h"
@@ -11,6 +15,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <sys/wait.h>
+
 
 static std::string db_path = "runs/runs.sqlite3";
 
@@ -70,7 +75,7 @@ int main(int argc, char *argv[]) {
 
     constexpr size_t MAX_PROCS = 8;
 
-    std::vector<pid_t> pids;
+    bool failed = false;
     size_t next = 0;
     size_t alive = 0;
 
@@ -81,6 +86,18 @@ int main(int argc, char *argv[]) {
         if (pid < 0) {
             perror("wait");
             exit(1);
+        }
+
+        if (WIFSIGNALED(status)) {
+            std::cerr << "Simulation process " << pid << " terminated by signal "
+                      << WTERMSIG(status) << '\n';
+            failed = true;
+        } else if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+            std::cerr << "Simulation process " << pid << " failed";
+            if (WIFEXITED(status))
+                std::cerr << " with exit code " << WEXITSTATUS(status);
+            std::cerr << '\n';
+            failed = true;
         }
 
         alive--;
@@ -98,8 +115,14 @@ int main(int argc, char *argv[]) {
         }
 
         if (pid == 0) {
-            run(experiments[next]);
-            exit(0);
+            try {
+                run(experiments[next]);
+                exit(0);
+            } catch (const std::exception &error) {
+                std::cerr << "Simulation failed for " << experiments[next]
+                          << ": " << error.what() << '\n';
+                exit(1);
+            }
         }
 
         alive++;
@@ -109,5 +132,5 @@ int main(int argc, char *argv[]) {
     while (alive > 0)
         wait_one();
 
-    return 0;
+    return failed ? 1 : 0;
 }

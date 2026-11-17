@@ -1,0 +1,22 @@
+sim:
+  region: ann-arbor
+  length_s: 604800
+  requests_file: 
+    template: data/requests/{sim.region}.parquet
+  riders_file: 
+    template: "data/riders/{sim.region}-{fleet.fleet_size}.parquet"
+  h3_resolution: 7
+
+policy:
+  matching: bounded-h3
+  charging: in-place
+  #charging: hubs
+  #n_hubs: 2
+  #charging_hubs:
+  #  template: "data/charging-hubs/ann-arbor-{policy.n_hubs}.csv"
+  max_response_time_s: 900
+
+fleet:
+  fleet_size: 3000
+  frac_2_seater: 0.0
+  frac_4_seater: 0.0

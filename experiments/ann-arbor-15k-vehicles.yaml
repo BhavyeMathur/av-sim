@@ -6,15 +6,12 @@ sim:
     template: data/requests/{sim.region}.parquet
   riders_file:
     template: "data/riders/{sim.region}-{fleet.fleet_size}.parquet"
-  h3_resolution: 8
+  h3_resolution: 7
 
 policy:
   matching: bounded-h3
-
-  charging: hubs
-  n_hubs: 2
-  charging_hubs:
-    template: "data/charging-hubs/{sim.region}-{policy.n_hubs}.csv"
+  charging: disable
+  max_response_time_s: 900
 
 fleet:
   fleet_size: 15000

@@ -19,6 +19,8 @@ public:
 
     [[nodiscard]] RiderData &get_data(rider_id_t rider_id);
 
+    void update_grid(rider_id_t rider_id);
+
     template<typename... W> requires (std::same_as<std::decay_t<W>, Waypoint> &&...)
 
     auto push_waypoints(rider_id_t rider_id, W &&... wp) {
@@ -36,7 +38,7 @@ public:
         auto rider_id = rider.id();
         auto &rider_data = get_data(rider_id);
         distance_t total_distance = 0;
-        coordinate last_pos{};
+        coordinate last_pos = rider.eta_pos_;
 
         auto process = [&](const Waypoint &w) {
             auto [distance, duration] = approx_eta(last_pos, w.pos);
@@ -50,11 +52,14 @@ public:
 
         rider.eta_range_ -= total_distance;
         rider.eta_pos_ = last_pos;
-        rider = update(rider);
+        update(rider);
         sim::events.trigger(RiderUpdatedETAPos{rider_id, total_distance});
 
-        if (!rider.next_scheduled_)
-            rider.schedule_next_(rider_data);
+        // Both indexing and charging callbacks can move a vehicle. Look it up
+        // by ID instead of retaining a reference into its former pool.
+        auto &current_rider = get_rider(rider_id);
+        if (!current_rider.next_scheduled_)
+            current_rider.schedule_next_(rider_data);
     }
 
     void charge(rider_id_t rider_id, coordinate at);

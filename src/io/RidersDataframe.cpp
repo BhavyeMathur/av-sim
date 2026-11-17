@@ -1,3 +1,4 @@
+#include <cmath>
 #include "RidersDataframe.h"
 
 #include <pandas.h>

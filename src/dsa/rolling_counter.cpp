@@ -1,10 +1,10 @@
+#include <cmath>
 #include "rolling_counter.h"
-
 
 rolling_counter::rolling_counter(uint32_t window, uint32_t resolution)
         : m_window(window),
           m_resolution(resolution),
-          m_events(static_cast<uint32_t>(ceil(window / resolution))) {
+          m_events(static_cast<uint32_t>(std::ceil(window / resolution))) {
 }
 
 void rolling_counter::up(uint32_t clock) {

@@ -6,7 +6,10 @@
 
 #include <random>
 
-RiderManager::RiderManager(const RidersDataFrame &df) {
+RiderManager::RiderManager(const RidersDataFrame &df)
+        : RiderGrid(df.size()),
+          rider_id_to_data_(df.size()),
+          n_riders_(df.size()) {
     std::mt19937 rng(std::random_device{}());
     std::discrete_distribution<int> dist{
             sim::configs.fleet.frac_2_seater,
@@ -41,6 +44,10 @@ RiderData &RiderManager::get_data(rider_id_t rider_id) {
     return rider_id_to_data_[rider_id];
 }
 
+void RiderManager::update_grid(rider_id_t rider_id) {
+    update(get_rider(rider_id));
+}
+
 void RiderManager::charge(rider_id_t rider_id, coordinate at) {
     auto &rider = get_rider(rider_id);
     return charge(rider, at);
@@ -48,6 +55,7 @@ void RiderManager::charge(rider_id_t rider_id, coordinate at) {
 
 void RiderManager::charge(Rider &rider, coordinate at) {
     EventLock <RiderUpdatedETAPos> lock;
+    auto rider_id = rider.id();
 
     auto [distance, _] = approx_eta(rider.eta_pos_, at);
     rider.eta_range_ -= distance;
@@ -59,5 +67,6 @@ void RiderManager::charge(Rider &rider, coordinate at) {
     push_waypoints(rider, Waypoint{at, 0, INVALID_REQ_ID, Waypoint::Kind::ChargeStart},
                    Waypoint{at, approx_charge_time, INVALID_REQ_ID, Waypoint::Kind::ChargeDone});
 
-    rider.eta_range_ = sim::configs.fleet.max_range;  // we will be back to full capacity once charging is complete
+    // Waypoint insertion can move the vehicle into another pool.
+    get_rider(rider_id).eta_range_ = sim::configs.fleet.max_range;
 }

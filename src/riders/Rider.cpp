@@ -34,7 +34,7 @@ void Rider::schedule_next_(RiderData &data) {
     // otherwise we calculate the completion time of the next waypoint
     // by adding dwell_time + actual_eta (movement time)
     // and push this to the global event queue
-    const auto &waypoint = steps_.front().waypoint;
+    const auto waypoint = steps_.front().waypoint;
 
     auto [distance, duration] = actual_eta(pos_, waypoint.pos);
     duration += waypoint.dwell_s;
@@ -72,6 +72,7 @@ void Rider::schedule_next_(RiderData &data) {
             break;
 
         default:
+            break;
     }
 }
 
@@ -79,10 +80,10 @@ void Rider::schedule_next_(RiderData &data) {
 // the rider updates its position and schedules the next waypoint (if any)
 void Rider::complete_waypoint() {
     debug("Rider::complete_waypoint(rider_id=%i)", id_);
-    assert(!steps_.empty() && "no waypoints to complete");
 
     auto &data = sim::riders.get_data(id_);
     auto &steps_ = data.steps_;
+    assert(!steps_.empty() && "no waypoints to complete");
     auto &pos_ = data.pos_;
     auto &last_commit_at_ = data.last_commit_at_;
 
@@ -110,6 +111,7 @@ void Rider::complete_waypoint() {
             break;
 
         default:
+            break;
     }
 
     // update position and last commit at
@@ -165,4 +167,6 @@ std::string Rider::state_to_string(RiderState state) {
         case RiderState::SIZE:
             throw std::invalid_argument("invalid state");
     }
+
+    throw std::invalid_argument("invalid state");
 }

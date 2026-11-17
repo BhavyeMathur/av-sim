@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include "Database.h"
 #include "SimulationConfigs.h"
 
